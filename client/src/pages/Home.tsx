@@ -35,13 +35,13 @@ export default function Home() {
             <h1 className="text-4xl font-bold mb-6 text-white">Create and Send Invoices Directly Through Telegram</h1>
             <p className="text-xl mb-8 text-white/90">A simple way for freelancers to manage invoices and get paid faster</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="https://t.me/your_bot_name" target="_blank" rel="noopener noreferrer">
+              <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
                 <Button size="lg" className="w-full sm:w-auto bg-white text-primary hover:bg-white/90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-2">
                     <path d="m22 2-7 20-4-9-9-4Z" />
                     <path d="M22 2 11 13" />
                   </svg>
-                  Try on Telegram
+                  Open in Telegram
                 </Button>
               </a>
               <Link href="/dashboard">
@@ -136,7 +136,7 @@ export default function Home() {
                     Stripe payment links
                   </li>
                 </ul>
-                <a href="https://t.me/your_bot_name" target="_blank" rel="noopener noreferrer">
+                <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
                   <Button className="w-full btn-primary">Get Started</Button>
                 </a>
               </CardContent>
