@@ -212,15 +212,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { status } = req.body;
       if (!status || !["pending", "paid", "canceled"].includes(status)) {
+        console.error(`Invalid status received: ${status}`);
         return res.status(400).json({ message: "Invalid status" });
       }
       
+      console.log(`Updating invoice ${req.params.id} status to ${status}`);
+      
       const invoice = await storage.updateInvoiceStatus(req.params.id, status);
       if (!invoice) {
+        console.error(`Invoice not found for ID: ${req.params.id}`);
         return res.status(404).json({ message: "Invoice not found" });
       }
       
-      return res.json(invoice);
+      console.log(`Invoice ${req.params.id} status updated successfully to ${status}`);
+      
+      // Get the freshest invoice data to ensure we're returning the updated version
+      const updatedInvoice = await storage.getInvoiceById(req.params.id);
+      console.log(`Fresh invoice data:`, JSON.stringify(updatedInvoice));
+      
+      return res.json(updatedInvoice);
     } catch (error) {
       console.error("Error updating invoice status:", error);
       return res.status(500).json({ message: "Failed to update invoice status" });
@@ -230,24 +240,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Handle invoice payment success
   app.get('/invoice-paid', async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { id } = req.query;
       
       if (!id) {
+        console.error("Missing invoice ID in request");
         return res.status(400).send("Missing invoice ID");
       }
       
-      console.log(`Payment success for invoice ${id}`);
+      const invoiceId = id as string;
+      console.log(`Payment success for invoice ${invoiceId}`);
       
-      // Update invoice status
-      const invoice = await storage.updateInvoiceStatus(id as string, 'paid');
-      
-      if (!invoice) {
-        console.error(`Invoice not found for ID: ${id}`);
+      // Check if invoice exists first
+      const existingInvoice = await storage.getInvoiceById(invoiceId);
+      if (!existingInvoice) {
+        console.error(`Invoice not found for ID: ${invoiceId}`);
         return res.redirect('/dashboard?error=invoice-not-found');
       }
       
-      // Redirect to the dashboard with success message
-      return res.redirect('/dashboard?success=payment-complete');
+      // Update invoice status
+      console.log(`Updating invoice ${invoiceId} status to paid`);
+      const invoice = await storage.updateInvoiceStatus(invoiceId, 'paid');
+      
+      if (!invoice) {
+        console.error(`Failed to update invoice ${invoiceId} status`);
+        return res.redirect('/dashboard?error=invoice-update-failed');
+      }
+      
+      console.log(`Invoice ${invoiceId} updated successfully to paid, redirecting to dashboard`);
+      
+      // Redirect to the dashboard with success message and timestamp to avoid caching
+      const timestamp = Date.now();
+      return res.redirect(`/dashboard?success=payment-complete&id=${invoiceId}&t=${timestamp}`);
     } catch (error) {
       console.error("Error handling payment success:", error);
       return res.redirect('/dashboard?error=payment-processing');
@@ -257,24 +285,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Handle invoice payment cancellation
   app.get('/invoice-canceled', async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { id } = req.query;
       
       if (!id) {
+        console.error("Missing invoice ID in request");
         return res.status(400).send("Missing invoice ID");
       }
       
-      console.log(`Payment canceled for invoice ${id}`);
+      const invoiceId = id as string;
+      console.log(`Payment canceled for invoice ${invoiceId}`);
       
-      // Update invoice status
-      const invoice = await storage.updateInvoiceStatus(id as string, 'canceled');
-      
-      if (!invoice) {
-        console.error(`Invoice not found for ID: ${id}`);
+      // Check if invoice exists first
+      const existingInvoice = await storage.getInvoiceById(invoiceId);
+      if (!existingInvoice) {
+        console.error(`Invoice not found for ID: ${invoiceId}`);
         return res.redirect('/dashboard?error=invoice-not-found');
       }
       
-      // Redirect to the dashboard with canceled message
-      return res.redirect('/dashboard?canceled=true');
+      // Update invoice status
+      console.log(`Updating invoice ${invoiceId} status to canceled`);
+      const invoice = await storage.updateInvoiceStatus(invoiceId, 'canceled');
+      
+      if (!invoice) {
+        console.error(`Failed to update invoice ${invoiceId} status`);
+        return res.redirect('/dashboard?error=invoice-update-failed');
+      }
+      
+      console.log(`Invoice ${invoiceId} updated successfully to canceled, redirecting to dashboard`);
+      
+      // Redirect to the dashboard with canceled message and timestamp to avoid caching
+      const timestamp = Date.now();
+      return res.redirect(`/dashboard?canceled=true&id=${invoiceId}&t=${timestamp}`);
     } catch (error) {
       console.error("Error handling payment cancellation:", error);
       return res.redirect('/dashboard?error=cancel-processing');
@@ -309,19 +355,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract the invoice ID from the success URL
       const successUrl = session.success_url;
-      const match = successUrl?.match(/invoice-paid\?id=([^&]+)/);
+      console.log("Success URL from webhook:", successUrl);
       
+      // Try multiple regex patterns to extract the invoice ID
+      let invoiceId = null;
+      
+      // Check the standard pattern
+      let match = successUrl?.match(/invoice-paid\?id=([^&]+)/);
       if (match && match[1]) {
-        const invoiceId = match[1];
+        invoiceId = match[1];
+      } 
+      // Check for other possible patterns if needed
+      else if (successUrl?.includes('id=')) {
+        match = successUrl.match(/id=([^&]+)/);
+        if (match && match[1]) {
+          invoiceId = match[1];
+        }
+      }
+      
+      if (invoiceId) {
         console.log(`Updating invoice ${invoiceId} to paid via webhook`);
-        await storage.updateInvoiceStatus(invoiceId, 'paid');
+        
+        try {
+          // First check if invoice exists
+          const existingInvoice = await storage.getInvoiceById(invoiceId);
+          if (!existingInvoice) {
+            console.error(`Webhook: Invoice not found for ID: ${invoiceId}`);
+            return res.status(404).json({ error: "Invoice not found" });
+          }
+          
+          // Update invoice status
+          const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, 'paid');
+          if (!updatedInvoice) {
+            console.error(`Webhook: Failed to update invoice ${invoiceId}`);
+            return res.status(500).json({ error: "Failed to update invoice" });
+          }
+          
+          console.log(`Webhook: Invoice ${invoiceId} successfully updated to paid`);
+          
+          // Return success with invoice data for debugging
+          return res.json({
+            received: true,
+            updated: true,
+            invoiceId: invoiceId,
+            currentStatus: updatedInvoice.status,
+          });
+        } catch (error) {
+          console.error(`Webhook: Error updating invoice ${invoiceId}:`, error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
       } else {
-        console.error("Could not extract invoice ID from success URL:", successUrl);
+        console.error("Webhook: Could not extract invoice ID from success URL:", successUrl);
+        return res.status(400).json({ error: "Could not extract invoice ID from success URL" });
       }
     }
     
     // Return a response to acknowledge receipt of the event
-    res.json({received: true});
+    res.json({received: true, processed: false});
   });
 
   // Create Payment Intent API endpoint

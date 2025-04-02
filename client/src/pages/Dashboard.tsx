@@ -20,51 +20,7 @@ export default function Dashboard() {
   const [location] = useLocation();
   const { toast } = useToast();
   
-  // Check for URL parameters on mount (for Stripe redirects)
-  useEffect(() => {
-    // Extract URL parameters
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const error = params.get('error');
-    const canceled = params.get('canceled');
-    
-    // Show appropriate toast message
-    if (success === 'payment-complete') {
-      toast({
-        title: "Payment Successful",
-        description: "Your invoice has been marked as paid.",
-        variant: "default",
-      });
-      // Force refresh invoices
-      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      queryClient.refetchQueries({ queryKey: ["/api/invoices"] });
-      // Set active tab to "paid"
-      setActiveTab("paid");
-    } else if (error) {
-      toast({
-        title: "Payment Error",
-        description: error === 'invoice-not-found' 
-          ? "Invoice could not be found."
-          : "There was an error processing your payment.",
-        variant: "destructive",
-      });
-    } else if (canceled) {
-      toast({
-        title: "Payment Canceled",
-        description: "Your payment has been canceled.",
-        variant: "default",
-      });
-      // Set active tab to "canceled"
-      setActiveTab("canceled");
-    }
-    
-    // Clear URL parameters after processing them
-    if (success || error || canceled) {
-      window.history.replaceState({}, document.title, location.split('?')[0]);
-    }
-  }, [location, toast]);
-
-  // Query for fetching invoices
+  // Query for fetching invoices - defined before being used in effects
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
     refetchOnWindowFocus: true,
@@ -80,6 +36,97 @@ export default function Dashboard() {
       return response.json();
     }
   });
+  
+  // Check for URL parameters on mount (for Stripe redirects)
+  useEffect(() => {
+    // Extract URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const canceled = params.get('canceled');
+    const invoiceId = params.get('id');
+    
+    // Show appropriate toast message
+    if (success === 'payment-complete') {
+      toast({
+        title: "Payment Successful",
+        description: "Your invoice has been marked as paid.",
+        variant: "default",
+      });
+      
+      // Force immediate full reload of all invoices
+      queryClient.removeQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
+      // If we have the invoice ID, also invalidate that specific invoice
+      if (invoiceId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      }
+      
+      // Force an immediate refetch
+      refetch();
+      
+      // Set active tab to "paid"
+      setActiveTab("paid");
+      
+      // Set up aggressive polling for the next 5 seconds to ensure we get updated data
+      const pollInterval = setInterval(() => {
+        console.log("Polling for invoice updates...");
+        refetch();
+      }, 1000);
+      
+      // Clear polling after 5 seconds
+      setTimeout(() => {
+        clearInterval(pollInterval);
+      }, 5000);
+      
+    } else if (error) {
+      toast({
+        title: "Payment Error",
+        description: error === 'invoice-not-found' 
+          ? "Invoice could not be found."
+          : "There was an error processing your payment.",
+        variant: "destructive",
+      });
+    } else if (canceled) {
+      toast({
+        title: "Payment Canceled",
+        description: "Your payment has been canceled.",
+        variant: "default",
+      });
+      
+      // Force immediate full reload of all invoices
+      queryClient.removeQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
+      // If we have the invoice ID, also invalidate that specific invoice
+      if (invoiceId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      }
+      
+      // Force an immediate refetch
+      refetch();
+      
+      // Set active tab to "canceled"
+      setActiveTab("canceled");
+      
+      // Set up aggressive polling for the next 5 seconds to ensure we get updated data
+      const pollInterval = setInterval(() => {
+        console.log("Polling for invoice updates...");
+        refetch();
+      }, 1000);
+      
+      // Clear polling after 5 seconds
+      setTimeout(() => {
+        clearInterval(pollInterval);
+      }, 5000);
+    }
+    
+    // Clear URL parameters after processing them
+    if (success || error || canceled) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [location, toast, refetch]);
 
   // Effect to refetch when store changes
   useEffect(() => {
