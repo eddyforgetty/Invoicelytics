@@ -37,6 +37,44 @@ export default function Dashboard() {
     }
   });
   
+  // Function to directly check and update invoice status
+  const checkAndUpdateInvoiceStatus = async (invoiceId: string) => {
+    if (!invoiceId) return;
+    
+    try {
+      console.log(`Direct API check for invoice ${invoiceId} status`);
+      
+      // First try to get the invoice directly
+      const response = await fetch(`/api/invoices/${invoiceId}?_=${Date.now()}`);
+      if (!response.ok) {
+        console.error(`Failed to fetch invoice ${invoiceId}`);
+        return;
+      }
+      
+      const invoice = await response.json();
+      console.log(`Retrieved invoice ${invoiceId} with status: ${invoice.status}`);
+      
+      // Force the query client to update its cache with this invoice
+      queryClient.setQueryData([`/api/invoices/${invoiceId}`], invoice);
+      
+      // Update the invoice list cache by merging in this updated invoice
+      queryClient.setQueryData(["/api/invoices"], (oldData: Invoice[] | undefined) => {
+        if (!oldData) return [invoice];
+        
+        return oldData.map(item => 
+          item.invoiceId === invoiceId ? { ...item, ...invoice } : item
+        );
+      });
+      
+      // Force a refetch to be sure we have fresh data
+      refetch();
+      
+      return invoice;
+    } catch (error) {
+      console.error(`Error checking invoice ${invoiceId} status:`, error);
+    }
+  };
+
   // Check for URL parameters on mount (for Stripe redirects)
   useEffect(() => {
     // Extract URL parameters
@@ -45,6 +83,28 @@ export default function Dashboard() {
     const error = params.get('error');
     const canceled = params.get('canceled');
     const invoiceId = params.get('id');
+    const sync = params.get('sync') === 'true';
+    
+    // If we have an invoice ID and the sync flag, check status immediately
+    if (invoiceId && sync) {
+      console.log(`Sync flag detected, immediately checking invoice ${invoiceId} status`);
+      // Initial check
+      checkAndUpdateInvoiceStatus(invoiceId).then(invoice => {
+        console.log("Direct status check complete, invoice:", invoice);
+      });
+      
+      // Set up aggressive polling for 10 seconds
+      const pollInterval = setInterval(() => {
+        console.log(`Polling invoice ${invoiceId} status...`);
+        checkAndUpdateInvoiceStatus(invoiceId);
+      }, 1000);
+      
+      // Clear polling after 10 seconds
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        console.log("Status polling complete");
+      }, 10000);
+    }
     
     // Show appropriate toast message
     if (success === 'payment-complete') {
@@ -61,6 +121,9 @@ export default function Dashboard() {
       // If we have the invoice ID, also invalidate that specific invoice
       if (invoiceId) {
         queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+        
+        // Direct check with server 
+        checkAndUpdateInvoiceStatus(invoiceId);
       }
       
       // Force an immediate refetch
@@ -68,17 +131,6 @@ export default function Dashboard() {
       
       // Set active tab to "paid"
       setActiveTab("paid");
-      
-      // Set up aggressive polling for the next 5 seconds to ensure we get updated data
-      const pollInterval = setInterval(() => {
-        console.log("Polling for invoice updates...");
-        refetch();
-      }, 1000);
-      
-      // Clear polling after 5 seconds
-      setTimeout(() => {
-        clearInterval(pollInterval);
-      }, 5000);
       
     } else if (error) {
       toast({
@@ -102,6 +154,9 @@ export default function Dashboard() {
       // If we have the invoice ID, also invalidate that specific invoice
       if (invoiceId) {
         queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+        
+        // Direct check with server
+        checkAndUpdateInvoiceStatus(invoiceId);
       }
       
       // Force an immediate refetch
@@ -109,17 +164,6 @@ export default function Dashboard() {
       
       // Set active tab to "canceled"
       setActiveTab("canceled");
-      
-      // Set up aggressive polling for the next 5 seconds to ensure we get updated data
-      const pollInterval = setInterval(() => {
-        console.log("Polling for invoice updates...");
-        refetch();
-      }, 1000);
-      
-      // Clear polling after 5 seconds
-      setTimeout(() => {
-        clearInterval(pollInterval);
-      }, 5000);
     }
     
     // Clear URL parameters after processing them

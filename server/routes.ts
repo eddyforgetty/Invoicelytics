@@ -60,15 +60,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get invoice by ID
   app.get("/api/invoices/:id", async (req, res) => {
     try {
+      const invoiceId = req.params.id;
+      
+      console.log(`GET /api/invoices/${invoiceId} direct fetch request received`);
+      
       // Set cache control headers to prevent caching
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      const invoice = await storage.getInvoiceById(req.params.id);
+      const invoice = await storage.getInvoiceById(invoiceId);
       if (!invoice) {
+        console.log(`Invoice with ID ${invoiceId} not found`);
         return res.status(404).json({ message: "Invoice not found" });
       }
+      
+      console.log(`Successfully retrieved invoice ${invoiceId} with status: ${invoice.status}`);
       return res.json(invoice);
     } catch (error) {
       console.error("Error fetching invoice:", error);
@@ -237,6 +244,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct API endpoint to update invoice status - used by frontend to force-refresh status
+  app.post('/api/force-update-invoice-status', async (req, res) => {
+    try {
+      const { invoiceId, status } = req.body;
+      
+      if (!invoiceId || !status) {
+        return res.status(400).json({ error: "Missing invoiceId or status" });
+      }
+      
+      if (!['pending', 'paid', 'canceled'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be pending, paid, or canceled" });
+      }
+      
+      console.log(`Force update invoice ${invoiceId} status to ${status}`);
+      
+      // Check if invoice exists first
+      const existingInvoice = await storage.getInvoiceById(invoiceId);
+      if (!existingInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      // Update invoice status
+      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
+      
+      if (!updatedInvoice) {
+        return res.status(500).json({ error: "Failed to update invoice status" });
+      }
+      
+      return res.json({ 
+        success: true, 
+        invoice: updatedInvoice,
+        message: `Invoice status updated to ${status}`
+      });
+    } catch (error) {
+      console.error("Error in force-update-invoice-status:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Handle invoice payment success
   app.get('/invoice-paid', async (req, res) => {
     try {
@@ -273,9 +319,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Invoice ${invoiceId} updated successfully to paid, redirecting to dashboard`);
       
-      // Redirect to the dashboard with success message and timestamp to avoid caching
+      // Use special sync flag to force frontend to immediately check status
       const timestamp = Date.now();
-      return res.redirect(`/dashboard?success=payment-complete&id=${invoiceId}&t=${timestamp}`);
+      return res.redirect(`/dashboard?success=payment-complete&id=${invoiceId}&sync=true&t=${timestamp}`);
     } catch (error) {
       console.error("Error handling payment success:", error);
       return res.redirect('/dashboard?error=payment-processing');
@@ -318,9 +364,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Invoice ${invoiceId} updated successfully to canceled, redirecting to dashboard`);
       
-      // Redirect to the dashboard with canceled message and timestamp to avoid caching
+      // Use special sync flag to force frontend to immediately check status
       const timestamp = Date.now();
-      return res.redirect(`/dashboard?canceled=true&id=${invoiceId}&t=${timestamp}`);
+      return res.redirect(`/dashboard?canceled=true&id=${invoiceId}&sync=true&t=${timestamp}`);
     } catch (error) {
       console.error("Error handling payment cancellation:", error);
       return res.redirect('/dashboard?error=cancel-processing');
