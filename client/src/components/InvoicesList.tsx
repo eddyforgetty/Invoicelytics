@@ -10,6 +10,10 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
+import { useState } from "react";
 
 interface InvoicesListProps {
   invoices: Invoice[] | undefined;
@@ -18,6 +22,58 @@ interface InvoicesListProps {
 }
 
 export default function InvoicesList({ invoices, isLoading, filter }: InvoicesListProps) {
+  const { toast } = useToast();
+  const [updatingInvoiceId, setUpdatingInvoiceId] = useState<string | null>(null);
+
+  // Function to manually update invoice status for testing
+  const updateInvoiceStatus = async (invoiceId: string, status: string) => {
+    console.log(`Manually updating invoice ${invoiceId} to ${status}`);
+    setUpdatingInvoiceId(invoiceId);
+    
+    try {
+      const response = await fetch('/api/force-update-invoice-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          invoiceId, 
+          status 
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update invoice status');
+      }
+      
+      const result = await response.json();
+      
+      // Force UI update
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      
+      // Force refetch
+      queryClient.refetchQueries({ queryKey: ['/api/invoices'] });
+      
+      toast({
+        title: 'Status Updated',
+        description: `Invoice #${invoiceId.substring(0, 6)}... has been marked as ${status}`,
+        variant: 'default',
+      });
+      
+      console.log(`Manual status update successful:`, result);
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+      toast({
+        title: 'Update Failed',
+        description: (error as Error).message || 'Failed to update invoice status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingInvoiceId(null);
+    }
+  };
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -98,13 +154,7 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant={
-                      invoice.status === "paid" 
-                        ? "success" 
-                        : invoice.status === "pending" 
-                          ? "warning" 
-                          : "destructive"
-                    }
+                    variant={invoice.status === "paid" ? "default" : "destructive"}
                     className={
                       invoice.status === "paid" 
                         ? "bg-green-100 text-green-800" 
@@ -125,7 +175,30 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                   {new Date(invoice.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
+                    {/* Status control buttons - for testing only */}
+                    <div className="flex space-x-1 mr-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="h-7 px-2 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                        disabled={invoice.status === 'paid' || updatingInvoiceId === invoice.invoiceId}
+                        onClick={() => updateInvoiceStatus(invoice.invoiceId, 'paid')}
+                      >
+                        Set Paid
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="h-7 px-2 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                        disabled={invoice.status === 'canceled' || updatingInvoiceId === invoice.invoiceId}
+                        onClick={() => updateInvoiceStatus(invoice.invoiceId, 'canceled')}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    
+                    {/* Regular actions */}
                     <Link href={`/invoice/${invoice.invoiceId}`}>
                       <button className="text-gray-500 hover:text-gray-700" title="View Invoice">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
@@ -140,7 +213,11 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                         title="Copy Payment Link"
                         onClick={() => {
                           navigator.clipboard.writeText(invoice.stripePaymentLink!);
-                          // Could add a toast notification here
+                          toast({
+                            title: "Payment Link Copied",
+                            description: "Payment link has been copied to clipboard.",
+                            variant: "default"
+                          });
                         }}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-link">
