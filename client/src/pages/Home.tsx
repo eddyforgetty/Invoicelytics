@@ -15,7 +15,7 @@ export default function Home() {
                 <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                 <path d="M12 17.5v-11" />
               </svg>
-              <h1 className="text-xl font-bold text-white">Telegram Invoicing Bot</h1>
+              <h1 className="text-xl font-bold text-white">InvoiceLyticsBot</h1>
             </div>
             <div>
               <Link href="/dashboard">
@@ -243,12 +243,12 @@ export default function Home() {
                   <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                   <path d="M12 17.5v-11" />
                 </svg>
-                <span className="font-bold text-white">Telegram Invoicing Bot</span>
+                <span className="font-bold text-white">InvoiceLyticsBot</span>
               </div>
               <p className="text-sm text-slate-300 mt-2">A simple way to create and track invoices</p>
             </div>
             <div className="text-sm text-slate-300">
-              © {new Date().getFullYear()} Telegram Invoicing Bot. All rights reserved.
+              © {new Date().getFullYear()} InvoiceLyticsBot. All rights reserved.
             </div>
           </div>
         </div>

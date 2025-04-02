@@ -7,6 +7,15 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { initBot } from "./bot";
 
+// Type definitions for Stripe expanded objects
+interface ExpandedPaymentIntent {
+  client_secret?: string;
+}
+
+interface ExpandedInvoice {
+  payment_intent?: ExpandedPaymentIntent;
+}
+
 if (!process.env.STRIPE_SECRET_KEY) {
   console.warn('Missing required Stripe secret: STRIPE_SECRET_KEY');
 }
@@ -251,11 +260,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         // Access the payment intent through the expanded latest_invoice
-        const paymentIntent = typeof subscription.latest_invoice === 'object' && 
-          subscription.latest_invoice?.payment_intent;
+        const expandedInvoice = typeof subscription.latest_invoice === 'object' ? 
+          subscription.latest_invoice as unknown as ExpandedInvoice : null;
           
-        const clientSecret = typeof paymentIntent === 'object' ? 
-          paymentIntent.client_secret : null;
+        const clientSecret = expandedInvoice?.payment_intent?.client_secret || null;
 
         res.send({
           subscriptionId: subscription.id,
@@ -307,11 +315,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserTier(user.id, 'premium');
       
       // Access the payment intent through the expanded latest_invoice
-      const paymentIntent = typeof subscription.latest_invoice === 'object' && 
-        subscription.latest_invoice?.payment_intent;
+      const expandedInvoice = typeof subscription.latest_invoice === 'object' ? 
+        subscription.latest_invoice as unknown as ExpandedInvoice : null;
         
-      const clientSecret = typeof paymentIntent === 'object' ? 
-        paymentIntent.client_secret : null;
+      const clientSecret = expandedInvoice?.payment_intent?.client_secret || null;
   
       res.send({
         subscriptionId: subscription.id,

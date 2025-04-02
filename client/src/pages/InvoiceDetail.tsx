@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { InvoicePreview } from "@/components/InvoicePreview";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Invoice } from "@shared/schema";
 
 export default function InvoiceDetail() {
   const [, params] = useRoute("/invoice/:id");
   const invoiceId = params?.id;
   const [copied, setCopied] = useState(false);
 
-  const { data: invoice, isLoading, error } = useQuery({
+  const { data: invoice, isLoading, error } = useQuery<Invoice, Error, Invoice>({
     queryKey: [`/api/invoices/${invoiceId}`],
     enabled: !!invoiceId,
   });
@@ -122,29 +123,20 @@ export default function InvoiceDetail() {
             </Link>
             <h1 className="text-xl font-semibold">Invoice #{invoice.invoiceId}</h1>
           </div>
-          <Badge 
-            variant={
+          <div className={
               invoice.status === "paid" 
-                ? "success" 
+                ? "inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-800" 
                 : invoice.status === "pending" 
-                  ? "warning" 
-                  : "destructive"
-            }
-            className={
-              invoice.status === "paid" 
-                ? "bg-green-100 text-green-800" 
-                : invoice.status === "pending" 
-                  ? "bg-amber-100 text-amber-800" 
-                  : "bg-red-100 text-red-800"
-            }
-          >
+                  ? "inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800" 
+                  : "inline-flex items-center rounded-full border border-transparent px-2.5 py-0.5 text-xs font-semibold bg-red-100 text-red-800"
+            }>
             {invoice.status === "paid" 
               ? "Paid" 
               : invoice.status === "pending" 
                 ? "Pending" 
                 : "Canceled"
             }
-          </Badge>
+          </div>
         </div>
 
         <Card className="mb-6">

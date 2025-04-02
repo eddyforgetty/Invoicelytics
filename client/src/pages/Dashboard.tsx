@@ -8,12 +8,13 @@ import BotInterface from "@/components/BotInterface";
 import InvoicesList from "@/components/InvoicesList";
 import UsageMeter from "@/components/UsageMeter";
 import UpgradeModal from "@/components/UpgradeModal";
+import type { Invoice } from "@shared/schema";
 
 export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
 
-  const { data: invoices, isLoading } = useQuery({
+  const { data: invoices, isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
   });
 
@@ -35,7 +36,7 @@ export default function Dashboard() {
                     <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                     <path d="M12 17.5v-11" />
                   </svg>
-                  <span className="font-semibold text-lg">Telegram Invoicing</span>
+                  <span className="font-semibold text-lg">InvoiceLyticsBot</span>
                 </div>
               </Link>
             </div>
@@ -152,7 +153,7 @@ export default function Dashboard() {
       <footer className="bg-white border-t border-gray-200 py-4">
         <div className="container mx-auto px-4">
           <div className="text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} Telegram Invoicing Bot. All rights reserved.
+            © {new Date().getFullYear()} InvoiceLyticsBot. All rights reserved.
           </div>
         </div>
       </footer>
