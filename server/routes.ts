@@ -111,30 +111,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let paymentLink = null;
       if (stripe) {
         try {
-          const product = await stripe.products.create({
-            name: `Invoice ${invoiceId} - ${parsedData.description}`,
-          });
+          // Implement retry mechanism for Stripe payment link creation
+          const createStripePaymentLink = async (retryAttempt = 0): Promise<string | null> => {
+            try {
+              const product = await stripe.products.create({
+                name: `Invoice ${invoiceId} - ${parsedData.description}`,
+              });
+              
+              const price = await stripe.prices.create({
+                unit_amount: Math.round(parsedData.amount * 100), // Convert to cents
+                currency: 'usd',
+                product: product.id,
+              });
+              
+              // Generate absolute URLs for success and cancel callbacks
+              const baseUrl = process.env.NODE_ENV === 'production'
+                ? `https://${req.get('host')}`
+                : `${req.protocol}://${req.get('host')}`;
+              
+              const successUrl = `${baseUrl}/invoice-paid?id=${invoiceId}`;
+              const cancelUrl = `${baseUrl}/invoice-canceled?id=${invoiceId}`;
+                
+              console.log(`Creating payment session with success URL: ${successUrl}`);
+              
+              const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: [
+                  {
+                    price: price.id,
+                    quantity: 1,
+                  },
+                ],
+                mode: 'payment',
+                success_url: successUrl,
+                cancel_url: cancelUrl,
+              });
+              
+              return session.url;
+            } catch (error) {
+              // If we've retried 3 times, rethrow the error
+              if (retryAttempt >= 2) {
+                throw error;
+              }
+              
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return createStripePaymentLink(retryAttempt + 1);
+            }
+          };
           
-          const price = await stripe.prices.create({
-            unit_amount: Math.round(parsedData.amount * 100), // Convert to cents
-            currency: 'usd',
-            product: product.id,
-          });
+          // Try to create payment link with retry mechanism
+          paymentLink = await createStripePaymentLink();
           
-          const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-              {
-                price: price.id,
-                quantity: 1,
-              },
-            ],
-            mode: 'payment',
-            success_url: `${req.protocol}://${req.get('host')}/invoice-paid?id=${invoiceId}`,
-            cancel_url: `${req.protocol}://${req.get('host')}/invoice-canceled?id=${invoiceId}`,
-          });
-          
-          paymentLink = session.url;
+          if (paymentLink) {
+            console.log(`Payment link created successfully for invoice ${invoiceId}: ${paymentLink}`);
+          } else {
+            console.error(`Failed to create payment link for invoice ${invoiceId} after retries`);
+          }
         } catch (stripeError) {
           console.error("Stripe error:", stripeError);
         }
@@ -194,6 +227,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Handle invoice payment success
+  app.get('/invoice-paid', async (req, res) => {
+    try {
+      const { id } = req.query;
+      
+      if (!id) {
+        return res.status(400).send("Missing invoice ID");
+      }
+      
+      console.log(`Payment success for invoice ${id}`);
+      
+      // Update invoice status
+      const invoice = await storage.updateInvoiceStatus(id as string, 'paid');
+      
+      if (!invoice) {
+        console.error(`Invoice not found for ID: ${id}`);
+        return res.redirect('/dashboard?error=invoice-not-found');
+      }
+      
+      // Redirect to the dashboard with success message
+      return res.redirect('/dashboard?success=payment-complete');
+    } catch (error) {
+      console.error("Error handling payment success:", error);
+      return res.redirect('/dashboard?error=payment-processing');
+    }
+  });
+
+  // Handle invoice payment cancellation
+  app.get('/invoice-canceled', async (req, res) => {
+    try {
+      const { id } = req.query;
+      
+      if (!id) {
+        return res.status(400).send("Missing invoice ID");
+      }
+      
+      console.log(`Payment canceled for invoice ${id}`);
+      
+      // Update invoice status
+      const invoice = await storage.updateInvoiceStatus(id as string, 'canceled');
+      
+      if (!invoice) {
+        console.error(`Invoice not found for ID: ${id}`);
+        return res.redirect('/dashboard?error=invoice-not-found');
+      }
+      
+      // Redirect to the dashboard with canceled message
+      return res.redirect('/dashboard?canceled=true');
+    } catch (error) {
+      console.error("Error handling payment cancellation:", error);
+      return res.redirect('/dashboard?error=cancel-processing');
+    }
+  });
+
   // Stripe webhook for payment notifications
   app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
     if (!stripe) {
@@ -207,22 +294,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // In a real implementation, we would verify the webhook signature
       // event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-      event = JSON.parse(req.body);
+      const rawBody = req.body.toString('utf8');
+      event = JSON.parse(rawBody);
+      console.log("Webhook received:", event.type);
     } catch (err: any) {
+      console.error("Webhook parsing error:", err);
       return res.status(400).send(`Webhook Error: ${err.message || 'Unknown error'}`);
     }
     
     // Handle the event
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
+      console.log("Checkout session completed:", session.id);
       
       // Extract the invoice ID from the success URL
       const successUrl = session.success_url;
-      const match = successUrl.match(/invoice-paid\?id=([^&]+)/);
+      const match = successUrl?.match(/invoice-paid\?id=([^&]+)/);
       
       if (match && match[1]) {
         const invoiceId = match[1];
+        console.log(`Updating invoice ${invoiceId} to paid via webhook`);
         await storage.updateInvoiceStatus(invoiceId, 'paid');
+      } else {
+        console.error("Could not extract invoice ID from success URL:", successUrl);
       }
     }
     

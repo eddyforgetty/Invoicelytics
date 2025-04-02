@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,12 +9,60 @@ import InvoicesList from "@/components/InvoicesList";
 import UsageMeter from "@/components/UsageMeter";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import type { Invoice } from "@shared/schema";
 
 export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
   const lastInvoiceUpdate = useStore(state => state.lastInvoiceUpdate);
+  const [location] = useLocation();
+  const { toast } = useToast();
+  
+  // Check for URL parameters on mount (for Stripe redirects)
+  useEffect(() => {
+    // Extract URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const error = params.get('error');
+    const canceled = params.get('canceled');
+    
+    // Show appropriate toast message
+    if (success === 'payment-complete') {
+      toast({
+        title: "Payment Successful",
+        description: "Your invoice has been marked as paid.",
+        variant: "default",
+      });
+      // Force refresh invoices
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      queryClient.refetchQueries({ queryKey: ["/api/invoices"] });
+      // Set active tab to "paid"
+      setActiveTab("paid");
+    } else if (error) {
+      toast({
+        title: "Payment Error",
+        description: error === 'invoice-not-found' 
+          ? "Invoice could not be found."
+          : "There was an error processing your payment.",
+        variant: "destructive",
+      });
+    } else if (canceled) {
+      toast({
+        title: "Payment Canceled",
+        description: "Your payment has been canceled.",
+        variant: "default",
+      });
+      // Set active tab to "canceled"
+      setActiveTab("canceled");
+    }
+    
+    // Clear URL parameters after processing them
+    if (success || error || canceled) {
+      window.history.replaceState({}, document.title, location.split('?')[0]);
+    }
+  }, [location, toast]);
 
   // Query for fetching invoices
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
