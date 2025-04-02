@@ -233,22 +233,22 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-800 text-white py-8">
+      <footer className="bg-white border-t border-gray-200 py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
               <div className="flex items-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
                   <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
                   <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                   <path d="M12 17.5v-11" />
                 </svg>
-                <span className="font-bold text-white">InvoiceLyticsBot</span>
+                <span className="font-semibold">InvoiceLyticsBot</span>
               </div>
-              <p className="text-sm text-slate-300 mt-2">A simple way to create and track invoices</p>
+              <p className="text-sm text-gray-500 mt-2">A simple way to create and track invoices</p>
             </div>
-            <div className="text-sm text-slate-300">
-              © {new Date().getFullYear()} InvoiceLyticsBot. All rights reserved.
+            <div className="text-sm text-gray-500">
+              © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
             </div>
           </div>
         </div>
