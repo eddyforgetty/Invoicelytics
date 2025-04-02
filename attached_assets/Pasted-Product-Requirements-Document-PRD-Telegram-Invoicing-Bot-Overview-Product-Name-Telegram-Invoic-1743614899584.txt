@@ -1,0 +1,184 @@
+Product Requirements Document (PRD): Telegram Invoicing Bot
+Overview
+Product Name: Telegram Invoicing Bot
+Purpose: A Telegram bot that allows freelancers to create, send, and track invoices directly in Telegram chats, integrated with Stripe for payments.
+Target Audience: Freelancers and gig workers (B2C).
+Objective: Build a functional MVP in 2–3 weeks using Replit’s environment and Replit AI, targeting a niche micro SaaS solution with a free tier and paid plans.
+Pricing: Free tier (3 invoices/month), $5/month (10 invoices), $15/month (unlimited).
+Context: This is a micro SaaS product inspired by fast-to-revenue examples like Tweet Hunter and Widebundle, leveraging Telegram’s 700M+ user base.
+Goals
+Enable freelancers to invoice clients quickly without bulky apps.
+
+Use Telegram’s chat interface for seamless user interaction.
+
+Integrate Stripe for instant payment collection.
+
+Minimize setup with Replit’s hosting and database.
+
+Launch a simple, scalable MVP with potential for future growth.
+Key Features
+1. Welcome Message
+Description: Greet users and provide basic instructions on bot usage.
+
+Command: /start
+
+Output: “Welcome! Use /invoice [name] [amount] [description] to create an invoice.”
+
+Requirements: 
+Respond with a static text message when /start is triggered.
+Example: User sends /start, bot replies with the welcome message.
+2. Invoice Creation
+Description: Generate a PDF invoice based on user input and send it in the chat.
+
+Command: /invoice [name] [amount] [description] (e.g., /invoice John Doe 200 design work)
+
+Output: A PDF file sent to the chat with invoice details: "Invoice", "To: [name]", "Amount: $[amount]", "For: [description]".
+
+Requirements: 
+Parse command input into variables: name (string), amount (float), description (string).
+
+Generate a unique invoiceId using the current timestamp (e.g., Date.now()).
+
+Use pdfkit to create a PDF with the above text, saved as invoice_[invoiceId].pdf.
+
+Send the PDF file to the user via Telegram.
+Example: User sends /invoice Jane 50 logo design, bot sends a PDF named invoice_1698765432.pdf.
+3. Payment Integration
+Description: Add a Stripe payment link to each invoice for instant payment.
+
+Output: A follow-up message after the PDF: “Pay here: [stripe_payment_url]”.
+
+Requirements: 
+Use the Stripe API to create a payment link for the invoice amount (converted to cents) and description.
+
+Handle amount as a float (e.g., $200 → 20000 cents for Stripe).
+
+Send the payment URL as a separate message after the PDF.
+Example: After sending the PDF, bot replies: “Pay here: https://buy.stripe.com/test_url”.
+4. Invoice Tracking
+Description: Allow users to check the status of an invoice.
+
+Command: /status [invoice_id] (e.g., /status 1698765432)
+
+Output: “Status: [status], Amount: $[amount]” or “Invoice not found” if ID is invalid.
+
+Requirements: 
+Store invoice data in Replit’s key-value database with keys like invoice_[invoiceId] and values { name, amount, description, status }.
+
+Default status to “pending” when created (manual updates for MVP).
+
+Retrieve and display data when /status is called.
+Example: User sends /status 1698765432, bot replies: “Status: pending, Amount: $50”.
+5. Usage Limits (Free Tier)
+Description: Restrict free users to 3 invoices/month and prompt upgrades.
+
+Command: /invoice (checked before invoice creation)
+
+Output: If limit exceeded: “Upgrade for more: /upgrade”.
+
+Requirements: 
+Track usage per user with Replit database key usage_[userId] (e.g., increment from 0 to 3).
+
+Check limit before processing /invoice; allow if under 3, deny if over.
+
+Reset manually for MVP (no auto-reset logic yet).
+Example: User with ID 123 sends 4th /invoice, bot replies: “Upgrade for more: /upgrade”.
+6. Upgrade Prompt
+Description: Inform users about paid plans when they hit limits or request info.
+
+Command: /upgrade
+
+Output: “Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit [yourwebsite.com]”.
+
+Requirements: 
+Respond with a static text message containing pricing and a placeholder URL.
+Example: User sends /upgrade, bot replies with the pricing message.
+Technical Requirements
+Language: Node.js (use Replit’s Node.js template).
+
+Dependencies: Install via npm in Replit:
+telegraf (Telegram Bot API framework).
+
+stripe (Stripe API integration).
+
+pdfkit (PDF generation).
+
+dotenv (environment variables).
+
+@replit/database (key-value storage).
+Environment Variables: Store in Replit’s “Secrets” tab or .env:
+TELEGRAM_TOKEN: Bot token from BotFather.
+
+STRIPE_SECRET_KEY: Stripe API key from Stripe dashboard.
+Hosting: Use Replit’s built-in hosting (run continuously with “Always On” or external ping).
+
+Database: Replit’s key-value database for storing invoices and usage data.
+
+File System: Temporary PDF storage in Replit’s file system (e.g., invoice_[id].pdf).
+Constraints
+MVP Scope: Focus on core features only (no email delivery, webhooks, or dashboard yet).
+
+Time: Build in 2–3 weeks (code generation via Replit AI to speed up).
+
+Cost: Use Replit’s free tier for development; optional Hacker plan (~$7/month) for launch.
+
+Error Handling: Basic checks (e.g., invalid command format) with friendly messages (e.g., “Oops, try: /invoice [name] [amount] [description]”).
+
+Scalability: Manual status updates and usage resets for now; automate later.
+Deliverables for Replit AI
+Main File (index.js)
+Instructions for Replit AI: “Generate a Node.js script using Telegraf that implements a Telegram bot with the following commands: /start (welcome message), /invoice (creates PDF invoice with Stripe link), /status (checks invoice status), /upgrade (shows pricing). Use pdfkit for PDFs, Stripe for payment links, and Replit’s database for storage. Include usage limits (3 invoices per user) and environment variables with dotenv.”
+
+Expected Structure:
+javascript
+const { Telegraf } = require('telegraf');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const { Database } = require('@replit/database');
+const db = new Database();
+require('dotenv').config();
+
+const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
+
+// Feature implementations here (welcome, invoice, status, etc.)
+
+bot.launch();
+console.log('Bot started');
+Feature-Specific Prompts
+Welcome Message: “Add a /start command that replies with ‘Welcome! Use /invoice [name] [amount] [description] to create an invoice.’”
+
+Invoice Creation: “Create a function to parse /invoice [name] [amount] [description], generate a PDF with pdfkit, and send it via Telegram.”
+
+Payment Link: “Integrate Stripe to create a payment link for the invoice amount and description, then send it after the PDF.”
+
+Tracking: “Store invoice data in Replit database and add a /status [invoice_id] command to retrieve it.”
+
+Limits: “Add logic to track usage per user in Replit database, limit to 3 invoices, and reply with /upgrade if exceeded.”
+Acceptance Criteria
+Bot responds to /start, /invoice, /status, and /upgrade as specified.
+
+PDFs are generated and sent with correct details.
+
+Stripe links are valid and match the invoice amount.
+
+Free tier limits work (blocks after 3 invoices).
+
+Data persists in Replit database and is retrievable.
+
+Runs continuously in Replit without crashing.
+Next Steps Post-MVP
+Add email delivery for invoices (e.g., Nodemailer).
+
+Implement Stripe webhooks for automatic status updates.
+
+Build a landing page for paid plan signups.
+Instructions for Replit’s Coding Agent
+Setup: Create a new Node.js project in Replit and install dependencies: npm install telegraf stripe pdfkit dotenv @replit/database.
+
+Feed PRD: Copy this entire PRD into Replit AI’s prompt interface or break it into feature-specific prompts as listed above.
+
+Iterate: After initial code generation, test each command in Telegram and refine with follow-up prompts (e.g., “Fix this PDF sending error” or “Add error handling for invalid /invoice input”).
+
+Run: Click “Run” in Replit to start the bot and test with a Telegram token from BotFather.
+
