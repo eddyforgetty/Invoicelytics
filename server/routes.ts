@@ -246,11 +246,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // If user already has a subscription, retrieve it
     if (user.stripeSubscriptionId) {
       try {
-        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
+          expand: ['latest_invoice.payment_intent']
+        });
+
+        // Access the payment intent through the expanded latest_invoice
+        const paymentIntent = typeof subscription.latest_invoice === 'object' && 
+          subscription.latest_invoice?.payment_intent;
+          
+        const clientSecret = typeof paymentIntent === 'object' ? 
+          paymentIntent.client_secret : null;
 
         res.send({
           subscriptionId: subscription.id,
-          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+          clientSecret: clientSecret,
         });
         return;
       } catch (error: any) {
@@ -275,6 +284,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // In production, this would be stored in environment variables
       const priceId = "price_1OudFPQiDTPYTfNOv4e3q6A5"; 
 
+      // Ensure user is defined before proceeding
+      if (!user) {
+        return res.status(500).json({ message: "User data was lost during processing" });
+      }
+
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{
@@ -291,10 +305,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Also update user tier based on the subscription
       await storage.updateUserTier(user.id, 'premium');
+      
+      // Access the payment intent through the expanded latest_invoice
+      const paymentIntent = typeof subscription.latest_invoice === 'object' && 
+        subscription.latest_invoice?.payment_intent;
+        
+      const clientSecret = typeof paymentIntent === 'object' ? 
+        paymentIntent.client_secret : null;
   
       res.send({
         subscriptionId: subscription.id,
-        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        clientSecret: clientSecret,
       });
     } catch (error: any) {
       return res.status(400).send({ error: { message: error.message } });
