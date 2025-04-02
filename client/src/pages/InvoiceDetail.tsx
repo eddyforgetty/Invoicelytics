@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { InvoicePreview } from "@/components/InvoicePreview";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useStore } from "@/lib/store";
 import type { Invoice } from "@shared/schema";
 
 export default function InvoiceDetail() {
@@ -37,6 +38,8 @@ export default function InvoiceDetail() {
     }
   };
 
+  const triggerRefresh = useStore(state => state.triggerRefresh);
+
   const updateStatus = async (status: string) => {
     if (!invoiceId) return;
     
@@ -45,6 +48,15 @@ export default function InvoiceDetail() {
       // Invalidate both the specific invoice query and the global invoice list query
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
+      // Trigger global refresh via the store
+      triggerRefresh();
+      
+      // Force a direct refetch 
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        queryClient.refetchQueries({ queryKey: ["/api/invoices"] });
+      }, 100);
     } catch (error) {
       console.error("Error updating status:", error);
     }

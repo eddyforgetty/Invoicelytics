@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,19 +8,21 @@ import BotInterface from "@/components/BotInterface";
 import InvoicesList from "@/components/InvoicesList";
 import UsageMeter from "@/components/UsageMeter";
 import UpgradeModal from "@/components/UpgradeModal";
+import { useStore } from "@/lib/store";
 import type { Invoice } from "@shared/schema";
 
 export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
+  const lastInvoiceUpdate = useStore(state => state.lastInvoiceUpdate);
 
+  // Query for fetching invoices
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
     refetchOnWindowFocus: true,
     refetchInterval: 10000, // Refetch data every 10 seconds
     refetchOnMount: true,
-    staleTime: 0, // Consider data stale immediately
-    // Add a timestamp to the request to avoid browser caching
+    staleTime: 0,
     queryFn: async () => {
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/invoices?_=${timestamp}`);
@@ -30,6 +32,13 @@ export default function Dashboard() {
       return response.json();
     }
   });
+
+  // Effect to refetch when store changes
+  useEffect(() => {
+    if (lastInvoiceUpdate) {
+      refetch();
+    }
+  }, [lastInvoiceUpdate, refetch]);
 
   const toggleUpgradeModal = () => {
     setIsUpgradeModalOpen(!isUpgradeModalOpen);
