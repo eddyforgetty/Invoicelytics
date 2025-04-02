@@ -1,0 +1,285 @@
+import { Telegraf, Context } from "telegraf";
+// @ts-ignore - No type definitions available
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+import Stripe from "stripe";
+import { storage } from "./storage";
+import { invoiceCommandSchema } from "@shared/schema";
+import { ZodError } from "zod";
+
+type BotContext = Context & {
+  userId?: number;
+};
+
+// Ensure temporary directory exists
+const TEMP_DIR = path.join(process.cwd(), "tmp");
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+// Helper function to parse the invoice command arguments
+function parseInvoiceCommand(text: string) {
+  // Remove the /invoice command part
+  const args = text.replace(/^\/invoice\s+/i, "").trim();
+  
+  // Split by spaces but preserve quotes
+  const matches = args.match(/(?:[^\s"]+|"[^"]*")+/g);
+  
+  if (!matches || matches.length < 3) {
+    throw new Error("Invalid command format. Use: /invoice [name] [amount] [description]");
+  }
+  
+  // The name might contain spaces and be quoted
+  let name = matches[0].replace(/"/g, "");
+  
+  // Amount should be a number
+  const amount = parseFloat(matches[1]);
+  if (isNaN(amount)) {
+    throw new Error("Amount must be a valid number");
+  }
+  
+  // Description is everything else
+  const description = matches.slice(2).join(" ").replace(/"/g, "");
+  
+  return { name, amount, description };
+}
+
+// Generate a PDF invoice
+async function generateInvoicePDF(invoiceId: string, name: string, amount: number, description: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const pdfPath = path.join(TEMP_DIR, `invoice_${invoiceId}.pdf`);
+    const doc = new PDFDocument({ margin: 50 });
+    
+    // Pipe PDF to file
+    const stream = fs.createWriteStream(pdfPath);
+    doc.pipe(stream);
+    
+    // Add content to PDF
+    doc.fontSize(25).text("INVOICE", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(16).text(`Invoice #${invoiceId}`);
+    doc.moveDown();
+    doc.fontSize(14).text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.text(`To: ${name}`);
+    doc.moveDown();
+    doc.text(`Amount: $${amount.toFixed(2)}`);
+    doc.moveDown();
+    doc.text(`For: ${description}`);
+    doc.moveDown(2);
+    doc.text("Thank you for your business!", { align: "center" });
+    
+    // Finalize PDF
+    doc.end();
+    
+    stream.on("finish", () => {
+      resolve(pdfPath);
+    });
+    
+    stream.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
+export async function initBot(token: string, stripe: Stripe | null) {
+  const bot = new Telegraf<BotContext>(token);
+  
+  // Register middleware to find or create user
+  bot.use(async (ctx, next) => {
+    if (ctx.from) {
+      const telegramId = ctx.from.id.toString();
+      let user = await storage.getUserByTelegramId(telegramId);
+      
+      if (!user) {
+        // Create a new user
+        user = await storage.createUser({
+          username: ctx.from.username || `user_${telegramId}`,
+          password: "telegram", // Default password for Telegram users
+          telegramId,
+          telegramUsername: ctx.from.username,
+        });
+      }
+      
+      ctx.userId = user.id;
+    }
+    
+    return next();
+  });
+  
+  // Welcome message command
+  bot.command("start", async (ctx) => {
+    await ctx.reply(
+      "Welcome to InvoiceBot! Use /invoice [name] [amount] [description] to create an invoice."
+    );
+  });
+  
+  // Invoice creation command
+  bot.command("invoice", async (ctx) => {
+    try {
+      if (!ctx.userId) {
+        return await ctx.reply("You need to start a conversation with me first using /start");
+      }
+      
+      const user = await storage.getUser(ctx.userId);
+      if (!user) {
+        return await ctx.reply("User not found. Please try again.");
+      }
+      
+      // Check usage limits
+      if (user.tier === "free" && user.currentUsage >= 3) {
+        return await ctx.reply("You've reached your free tier limit (3 invoices/month). Use /upgrade for more.");
+      }
+      
+      if (user.tier === "basic" && user.currentUsage >= 10) {
+        return await ctx.reply("You've reached your basic tier limit (10 invoices/month). Use /upgrade for unlimited invoices.");
+      }
+      
+      // Parse command
+      const commandData = parseInvoiceCommand(ctx.message.text);
+      
+      try {
+        // Validate with Zod
+        const validData = invoiceCommandSchema.parse(commandData);
+        
+        // Generate unique invoice ID
+        const invoiceId = Date.now().toString();
+        
+        // Generate PDF
+        const pdfPath = await generateInvoicePDF(
+          invoiceId,
+          validData.name,
+          validData.amount,
+          validData.description
+        );
+        
+        // Send PDF to user
+        await ctx.replyWithDocument({ source: pdfPath, filename: `invoice_${invoiceId}.pdf` });
+        
+        // Create payment link if Stripe is available
+        let paymentLink = null;
+        if (stripe) {
+          try {
+            const product = await stripe.products.create({
+              name: `Invoice ${invoiceId} - ${validData.description}`,
+            });
+            
+            const price = await stripe.prices.create({
+              unit_amount: Math.round(validData.amount * 100), // Convert to cents
+              currency: 'usd',
+              product: product.id,
+            });
+            
+            const session = await stripe.checkout.sessions.create({
+              payment_method_types: ['card'],
+              line_items: [
+                {
+                  price: price.id,
+                  quantity: 1,
+                },
+              ],
+              mode: 'payment',
+              success_url: `https://example.com/invoice-paid?id=${invoiceId}`,
+              cancel_url: `https://example.com/invoice-canceled?id=${invoiceId}`,
+            });
+            
+            paymentLink = session.url;
+            
+            // Send payment link
+            if (paymentLink) {
+              await ctx.reply(`Pay here: ${paymentLink}`);
+            }
+          } catch (stripeError) {
+            console.error("Stripe error:", stripeError);
+          }
+        }
+        
+        // Store invoice in database
+        await storage.createInvoice({
+          invoiceId,
+          userId: ctx.userId,
+          clientName: validData.name,
+          amount: validData.amount,
+          description: validData.description,
+          stripePaymentLink: paymentLink,
+          pdfPath: pdfPath,
+        });
+        
+        // Increment user usage
+        await storage.incrementUserUsage(ctx.userId);
+        
+        // Clean up PDF file
+        setTimeout(() => {
+          fs.unlink(pdfPath, (err) => {
+            if (err) console.error("Error deleting temp PDF:", err);
+          });
+        }, 60000); // Delete after 1 minute
+      } catch (validationError) {
+        if (validationError instanceof ZodError) {
+          const errors = validationError.errors.map(e => e.message).join(", ");
+          await ctx.reply(`Validation error: ${errors}`);
+        } else {
+          throw validationError;
+        }
+      }
+    } catch (error: any) {
+      console.error("Error handling invoice command:", error);
+      await ctx.reply(`Error: ${error.message || "An unknown error occurred"}`);
+    }
+  });
+  
+  // Status command
+  bot.command("status", async (ctx) => {
+    try {
+      const args = ctx.message.text.split(" ");
+      if (args.length !== 2) {
+        return await ctx.reply("Usage: /status [invoice_id]");
+      }
+      
+      const invoiceId = args[1];
+      const invoice = await storage.getInvoiceById(invoiceId);
+      
+      if (!invoice) {
+        return await ctx.reply("Invoice not found");
+      }
+      
+      await ctx.reply(`Status: ${invoice.status}, Amount: $${invoice.amount.toFixed(2)}`);
+    } catch (error: any) {
+      console.error("Error handling status command:", error);
+      await ctx.reply(`Error: ${error.message || "An unknown error occurred"}`);
+    }
+  });
+  
+  // Upgrade command
+  bot.command("upgrade", async (ctx) => {
+    await ctx.reply(
+      "Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit https://example.com/upgrade"
+    );
+  });
+  
+  // Handle errors
+  bot.catch((err, ctx) => {
+    console.error(`Telegram Bot Error: ${err}`);
+    ctx.reply("An error occurred. Please try again later.");
+  });
+  
+  // Start the bot with a timeout to prevent hanging
+  try {
+    console.log("Launching Telegram bot...");
+    // Add a timeout to prevent indefinite hanging
+    const launchPromise = bot.launch();
+    
+    // Setup graceful stop handlers
+    process.once("SIGINT", () => bot.stop("SIGINT"));
+    process.once("SIGTERM", () => bot.stop("SIGTERM"));
+    
+    await launchPromise;
+    console.log("Telegram bot launched successfully");
+  } catch (error: any) {
+    console.error("Error launching Telegram bot:", error?.message || error);
+    // Continue even if bot fails to launch
+  }
+  
+  return bot;
+}

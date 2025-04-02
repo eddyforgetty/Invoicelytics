@@ -1,0 +1,306 @@
+import express, { type Express } from "express";
+import { createServer, type Server } from "http";
+import Stripe from "stripe";
+import { storage } from "./storage";
+import { createInvoiceSchema } from "@shared/schema";
+import { ZodError } from "zod";
+import { fromZodError } from "zod-validation-error";
+import { initBot } from "./bot";
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+
+if (!process.env.TELEGRAM_TOKEN) {
+  console.warn('Missing required Telegram token: TELEGRAM_TOKEN');
+}
+
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2023-10-16" as any, // Type assertion to bypass version check
+    })
+  : null;
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Telegram bot if token exists (non-blocking)
+  if (process.env.TELEGRAM_TOKEN) {
+    console.log("Starting Telegram bot initialization...");
+    // Start bot initialization without awaiting to prevent blocking server startup
+    initBot(process.env.TELEGRAM_TOKEN, stripe)
+      .then(() => console.log("Telegram bot initialized successfully"))
+      .catch(error => console.error("Failed to initialize Telegram bot:", error));
+  }
+
+  // Get all invoices for a user
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      // For demo purposes, get all invoices
+      const invoices = await storage.getAllInvoices();
+      return res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      return res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
+  // Get invoice by ID
+  app.get("/api/invoices/:id", async (req, res) => {
+    try {
+      const invoice = await storage.getInvoiceById(req.params.id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      return res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      return res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  // Create a new invoice
+  app.post("/api/invoices", async (req, res) => {
+    try {
+      const parsedData = createInvoiceSchema.parse(req.body);
+      
+      // In a real app, we would get the user ID from the authenticated session
+      // For this demo, we'll use a default user ID
+      const userId = 1;
+      
+      // Check if user has exceeded their invoice limit
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Check usage limits based on tier
+      if (user.tier === "free" && user.currentUsage >= 3) {
+        return res.status(403).json({ 
+          message: "Free tier limit reached (3 invoices/month). Please upgrade for more." 
+        });
+      }
+      
+      if (user.tier === "basic" && user.currentUsage >= 10) {
+        return res.status(403).json({ 
+          message: "Basic tier limit reached (10 invoices/month). Please upgrade for unlimited invoices." 
+        });
+      }
+      
+      // Create a unique invoice ID
+      const invoiceId = Date.now().toString();
+      
+      // Create a Stripe payment link if Stripe is available
+      let paymentLink = null;
+      if (stripe) {
+        try {
+          const product = await stripe.products.create({
+            name: `Invoice ${invoiceId} - ${parsedData.description}`,
+          });
+          
+          const price = await stripe.prices.create({
+            unit_amount: Math.round(parsedData.amount * 100), // Convert to cents
+            currency: 'usd',
+            product: product.id,
+          });
+          
+          const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+              {
+                price: price.id,
+                quantity: 1,
+              },
+            ],
+            mode: 'payment',
+            success_url: `${req.protocol}://${req.get('host')}/invoice-paid?id=${invoiceId}`,
+            cancel_url: `${req.protocol}://${req.get('host')}/invoice-canceled?id=${invoiceId}`,
+          });
+          
+          paymentLink = session.url;
+        } catch (stripeError) {
+          console.error("Stripe error:", stripeError);
+        }
+      }
+      
+      // Generate a PDF (in a real implementation, we'd use PDFKit here)
+      const pdfPath = `/invoices/${invoiceId}.pdf`;
+      
+      // Create the invoice in the database
+      const invoice = await storage.createInvoice({
+        invoiceId,
+        userId,
+        clientName: parsedData.clientName,
+        amount: parsedData.amount,
+        description: parsedData.description,
+        stripePaymentLink: paymentLink,
+        pdfPath,
+      });
+      
+      // Increment the user's current usage
+      await storage.incrementUserUsage(userId);
+      
+      return res.status(201).json(invoice);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      
+      console.error("Error creating invoice:", error);
+      return res.status(500).json({ message: "Failed to create invoice" });
+    }
+  });
+
+  // Update invoice status
+  app.put("/api/invoices/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || !["pending", "paid", "canceled"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const invoice = await storage.updateInvoiceStatus(req.params.id, status);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      return res.json(invoice);
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      return res.status(500).json({ message: "Failed to update invoice status" });
+    }
+  });
+
+  // Stripe webhook for payment notifications
+  app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured" });
+    }
+
+    const sig = req.headers['stripe-signature'];
+    
+    let event;
+    
+    try {
+      // In a real implementation, we would verify the webhook signature
+      // event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+      event = JSON.parse(req.body);
+    } catch (err: any) {
+      return res.status(400).send(`Webhook Error: ${err.message || 'Unknown error'}`);
+    }
+    
+    // Handle the event
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      
+      // Extract the invoice ID from the success URL
+      const successUrl = session.success_url;
+      const match = successUrl.match(/invoice-paid\?id=([^&]+)/);
+      
+      if (match && match[1]) {
+        const invoiceId = match[1];
+        await storage.updateInvoiceStatus(invoiceId, 'paid');
+      }
+    }
+    
+    // Return a response to acknowledge receipt of the event
+    res.json({received: true});
+  });
+
+  // Create Payment Intent API endpoint
+  app.post("/api/create-payment-intent", async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured" });
+    }
+
+    try {
+      const { amount } = req.body;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "usd",
+      });
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res
+        .status(500)
+        .json({ message: "Error creating payment intent: " + error.message });
+    }
+  });
+
+  // Create or get subscription API endpoint
+  app.post('/api/get-or-create-subscription', async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured" });
+    }
+
+    if (!req.body.userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const userId = req.body.userId;
+    let user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // If user already has a subscription, retrieve it
+    if (user.stripeSubscriptionId) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+
+        res.send({
+          subscriptionId: subscription.id,
+          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        });
+        return;
+      } catch (error: any) {
+        console.error("Error retrieving subscription:", error);
+        // Continue to create a new subscription if retrieval fails
+      }
+    }
+    
+    // Create a new customer and subscription
+    try {
+      // Default to 'testuser@example.com' for demo purposes
+      const email = user.telegramUsername ? `${user.telegramUsername}@example.com` : 'testuser@example.com';
+      
+      const customer = await stripe.customers.create({
+        email: email,
+        name: user.username,
+      });
+
+      user = await storage.updateStripeCustomerId(user.id, customer.id);
+      
+      // For demo purposes, we'll use a fixed price ID
+      // In production, this would be stored in environment variables
+      const priceId = "price_1OudFPQiDTPYTfNOv4e3q6A5"; 
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customer.id,
+        items: [{
+          price: priceId, 
+        }],
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent'],
+      });
+
+      await storage.updateUserStripeInfo(user.id, {
+        stripeCustomerId: customer.id, 
+        stripeSubscriptionId: subscription.id
+      });
+
+      // Also update user tier based on the subscription
+      await storage.updateUserTier(user.id, 'premium');
+  
+      res.send({
+        subscriptionId: subscription.id,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+      });
+    } catch (error: any) {
+      return res.status(400).send({ error: { message: error.message } });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
