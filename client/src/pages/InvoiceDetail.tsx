@@ -17,6 +17,16 @@ export default function InvoiceDetail() {
   const { data: invoice, isLoading, error } = useQuery<Invoice, Error, Invoice>({
     queryKey: [`/api/invoices/${invoiceId}`],
     enabled: !!invoiceId,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    queryFn: async () => {
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/invoices/${invoiceId}?_=${timestamp}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoice details');
+      }
+      return response.json();
+    }
   });
 
   const copyPaymentLink = () => {

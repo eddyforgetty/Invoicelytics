@@ -43,6 +43,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all invoices for a user
   app.get("/api/invoices", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       // For demo purposes, get all invoices
       const invoices = await storage.getAllInvoices();
       return res.json(invoices);
@@ -55,6 +60,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get invoice by ID
   app.get("/api/invoices/:id", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const invoice = await storage.getInvoiceById(req.params.id);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
@@ -162,6 +172,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update invoice status
   app.put("/api/invoices/:id/status", async (req, res) => {
     try {
+      // Set cache control headers to prevent caching
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       const { status } = req.body;
       if (!status || !["pending", "paid", "canceled"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });

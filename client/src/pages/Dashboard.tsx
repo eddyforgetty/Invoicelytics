@@ -14,10 +14,21 @@ export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
 
-  const { data: invoices, isLoading } = useQuery<Invoice[]>({
+  const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
     refetchOnWindowFocus: true,
     refetchInterval: 10000, // Refetch data every 10 seconds
+    refetchOnMount: true,
+    staleTime: 0, // Consider data stale immediately
+    // Add a timestamp to the request to avoid browser caching
+    queryFn: async () => {
+      const timestamp = new Date().getTime();
+      const response = await fetch(`/api/invoices?_=${timestamp}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch invoices');
+      }
+      return response.json();
+    }
   });
 
   const toggleUpgradeModal = () => {
