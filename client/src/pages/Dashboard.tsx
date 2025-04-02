@@ -16,6 +16,8 @@ export default function Dashboard() {
 
   const { data: invoices, isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
+    refetchOnWindowFocus: true,
+    refetchInterval: 10000, // Refetch data every 10 seconds
   });
 
   const toggleUpgradeModal = () => {
@@ -48,7 +50,7 @@ export default function Dashboard() {
               >
                 Upgrade Plan
               </Button>
-              <a href="https://t.me/your_bot_name" target="_blank" rel="noopener noreferrer">
+              <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
                 <Button size="sm">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-2">
                     <path d="m22 2-7 20-4-9-9-4Z" />

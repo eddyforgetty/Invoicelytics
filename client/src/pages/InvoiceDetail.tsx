@@ -32,8 +32,9 @@ export default function InvoiceDetail() {
     
     try {
       await apiRequest("PUT", `/api/invoices/${invoiceId}/status`, { status });
-      // Invalidate the query to refresh the data
+      // Invalidate both the specific invoice query and the global invoice list query
       queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
     } catch (error) {
       console.error("Error updating status:", error);
     }
