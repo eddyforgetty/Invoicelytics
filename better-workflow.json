@@ -1,0 +1,11 @@
+{
+  "name": "Better Server",
+  "command": "node better-workflow.js",
+  "restartOn": {
+    "fileChange": [
+      "server/**",
+      "shared/**",
+      "better-workflow.js"
+    ]
+  }
+}
