@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "./db";
+import migrate from "./migrate";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +39,26 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    // Initialize the database before starting the server
+    log("Initializing database...");
+    
+    // Run migrations to ensure database tables exist
+    log("Running database migrations...");
+    try {
+      await migrate();
+      log("Database migration completed successfully");
+    } catch (error) {
+      log(`Database migration error, but continuing with app startup: ${error}`);
+      // Continue anyway - we'll fallback to in-memory storage if needed
+    }
+    
+    log("Database setup completed");
+  } catch (error) {
+    log(`Database initialization error: ${error}`);
+    // Continue anyway - we'll fallback to in-memory storage for now
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

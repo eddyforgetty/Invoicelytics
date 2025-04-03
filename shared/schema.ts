@@ -33,6 +33,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
   telegramId: true,
   telegramUsername: true,
+  tier: true,
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoices).pick({
