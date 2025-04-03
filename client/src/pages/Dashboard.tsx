@@ -89,15 +89,41 @@ export default function Dashboard() {
     const sync = params.get('sync') === 'true';
     const paymentMethod = params.get('payment_method');
     
+    // Additional parameters specific to Stripe redirects
+    const paymentIntentStatus = params.get('payment_intent_status');
+    const paymentIntentId = params.get('payment_intent');
+    const redirectStatus = params.get('redirect_status');
+    
+    // Enhanced 3D Secure processing: detect successful payment via redirect_status or payment_intent_status
+    const isSuccessfulPayment = 
+      success === 'true' || 
+      redirectStatus === 'succeeded' || 
+      paymentIntentStatus === 'succeeded';
+    
+    // Log all parameters for debugging
+    if (invoiceId || paymentIntentId || success || error || redirectStatus) {
+      console.log('Payment return detected with params:', { 
+        invoiceId, 
+        success, 
+        redirectStatus,
+        paymentIntentStatus,
+        paymentIntentId, 
+        source,
+        error, 
+        canceled
+      });
+    }
+    
     // Clean URL parameters if they exist
-    if (window.history && (success || error || canceled || invoiceId || source)) {
+    if (window.history && (success || error || canceled || invoiceId || source || paymentIntentId || redirectStatus)) {
       // Create a URL without the query parameters
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
     }
     
     // Handle 3D Secure returns (these come from Stripe after authentication)
-    if (source === '3ds' && invoiceId && success === 'true') {
+    if ((source === '3ds' && invoiceId && isSuccessfulPayment) || 
+        (redirectStatus === 'succeeded' && invoiceId)) {
       console.log(`3D Secure return detected for invoice ${invoiceId}`);
       
       // Show a loading toast
@@ -168,8 +194,41 @@ export default function Dashboard() {
       }, 10000);
     }
     
+    // Direct payment intent success handling
+    if (paymentIntentStatus === 'succeeded' || redirectStatus === 'succeeded') {
+      toast({
+        title: "Payment Successful",
+        description: "Your payment has been verified and processed successfully.",
+        variant: "default",
+      });
+      
+      // Force immediate full reload of all invoices
+      queryClient.removeQueries({ queryKey: ["/api/invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
+      // If we have the invoice ID, directly check with the server
+      if (invoiceId) {
+        console.log(`Payment successful, checking invoice status for: ${invoiceId}`);
+        checkAndUpdateInvoiceStatus(invoiceId);
+        
+        // Also invalidate that specific invoice
+        queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      } 
+      // If we don't have an invoice ID but have a payment intent ID
+      else if (paymentIntentId) {
+        console.log(`Payment successful with payment intent ID: ${paymentIntentId}, but no invoice ID`);
+        // In the future, we could add an API to look up invoice by payment intent ID
+        // For now, just refresh all invoices
+      }
+      
+      // Set active tab to "paid"
+      setActiveTab("paid");
+      
+      // Force an immediate refetch
+      refetch();
+    }
     // Show appropriate toast message for standard return types
-    if (success === 'payment-complete') {
+    else if (success === 'payment-complete') {
       toast({
         title: "Payment Successful",
         description: "Your invoice has been marked as paid.",

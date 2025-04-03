@@ -378,15 +378,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stripe webhook for payment notifications
-  app.post('/api/webhook', express.json(), async (req, res) => {
+  app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
     try {
       if (!stripe) {
         console.error("Webhook: Stripe is not configured");
         return res.sendStatus(200); // Return 200 even for config errors
       }
   
-      // Get the event data from the request body
-      const event = req.body;
+      // Get the event data from the raw request body
+      let event;
+      try {
+        // Handle both Buffer and already parsed objects (for testing)
+        if (Buffer.isBuffer(req.body)) {
+          const rawBody = req.body.toString('utf8');
+          event = JSON.parse(rawBody);
+          console.log("Webhook received raw payload and parsed successfully");
+        } else {
+          // Already parsed (mainly for tests or direct API calls)
+          event = req.body;
+          console.log("Webhook received pre-parsed payload");
+        }
+      } catch (err) {
+        console.error("Webhook: Error parsing request body:", err);
+        return res.sendStatus(200); // Still return 200 for parsing errors
+      }
       
       // Enhanced validation: check for required fields in the event
       if (!event || !event.type || !event.data || !event.data.object) {
@@ -586,6 +601,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual status update endpoint (for testing)
+  app.post('/api/force-update-invoice-status', express.json(), async (req, res) => {
+    const { invoiceId, status } = req.body;
+    
+    if (!invoiceId || !status) {
+      return res.status(400).json({ message: "Invoice ID and status are required" });
+    }
+    
+    try {
+      // Verify the invoice exists
+      const existingInvoice = await storage.getInvoiceById(invoiceId);
+      if (!existingInvoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      
+      // Update invoice status
+      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
+      
+      if (!updatedInvoice) {
+        return res.status(500).json({ message: "Failed to update invoice status" });
+      }
+      
+      console.log(`Manual status update: Invoice ${invoiceId} set to ${status}`);
+      
+      return res.json({ 
+        success: true,
+        message: `Invoice status updated to ${status}`,
+        invoice: updatedInvoice
+      });
+    } catch (error: any) {
+      console.error("Error updating invoice status:", error);
+      return res.status(500).json({ 
+        message: "Error updating invoice status", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Test webhook endpoint (only for development)
+  app.post('/api/test-webhook', express.json(), async (req, res) => {
+    if (!stripe) {
+      return res.status(500).json({ message: "Stripe is not configured" });
+    }
+    
+    console.log("Test webhook received:", req.body);
+    
+    const { type, invoiceId } = req.body;
+    
+    // Create a mock event payload
+    let mockEvent: any = {
+      id: `evt_test_${Date.now()}`,
+      type: type || 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: `pi_test_${Date.now()}`,
+          metadata: {
+            invoiceId: invoiceId || ''
+          }
+        }
+      }
+    };
+    
+    // Make a POST request to our own webhook endpoint
+    try {
+      // Convert the mock event to a buffer (raw JSON)
+      const rawBody = Buffer.from(JSON.stringify(mockEvent));
+      
+      // Create options for the request to our webhook endpoint
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': rawBody.length.toString(),
+          'User-Agent': 'Stripe/v1 MockWebhooks/0.0.1'
+        },
+        body: rawBody
+      };
+      
+      // Use fetch to call our own webhook endpoint
+      const response = await fetch(`http://localhost:5000/api/webhook`, options);
+      
+      // Check the response
+      if (response.ok) {
+        return res.json({ 
+          success: true, 
+          message: "Test webhook sent and processed", 
+          event: mockEvent 
+        });
+      } else {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Test webhook was not processed correctly" 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error sending test webhook:", error);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Error sending test webhook",
+        error: error.message 
+      });
+    }
+  });
+  
   // Create or get subscription API endpoint
   app.post('/api/get-or-create-subscription', async (req, res) => {
     if (!stripe) {

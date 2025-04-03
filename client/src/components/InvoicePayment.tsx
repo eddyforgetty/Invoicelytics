@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
@@ -47,18 +46,17 @@ const InvoicePaymentForm = ({ amount, invoiceId, onSuccess, onCancel }: InvoiceP
         elements,
         confirmParams: {
           // Add return_url to redirect back after 3D Secure authentication
-          // Include more identifying parameters for improved webhook processing
+          // Include invoice ID as a query parameter for improved webhook processing
           return_url: `${window.location.origin}/dashboard?invoice=${invoiceId}&success=true&source=3ds&payment_method=card&t=${Date.now()}`,
           
           // Add metadata to help identify this payment 
           payment_method_data: {
             billing_details: {
               // Set a default description for the payment that appears on statements
-              // This helps users identify the charge on their statement
               name: `Invoice #${invoiceId}`
             }
           }
-        },
+        }
       });
 
       if (error) {
