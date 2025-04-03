@@ -17,17 +17,7 @@ import type { Invoice } from "@shared/schema";
 export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
-  const { 
-    lastInvoiceUpdate, 
-    startPolling, 
-    stopPolling, 
-    isPolling 
-  } = useStore(state => ({
-    lastInvoiceUpdate: state.lastInvoiceUpdate,
-    startPolling: state.startPolling,
-    stopPolling: state.stopPolling,
-    isPolling: state.isPolling
-  }));
+  const lastInvoiceUpdate = useStore(state => state.lastInvoiceUpdate);
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const { logoutMutation } = useAuth();
@@ -306,22 +296,9 @@ export default function Dashboard() {
   // Effect to refetch when store changes
   useEffect(() => {
     if (lastInvoiceUpdate) {
-      console.log(`Refetching invoices due to lastInvoiceUpdate change: ${new Date(lastInvoiceUpdate).toISOString()}`);
       refetch();
     }
   }, [lastInvoiceUpdate, refetch]);
-  
-  // Effect to start and stop polling for invoice updates
-  useEffect(() => {
-    console.log("Starting invoice update polling");
-    startPolling();
-    
-    // Clean up polling when component unmounts
-    return () => {
-      console.log("Stopping invoice update polling");
-      stopPolling();
-    };
-  }, [startPolling, stopPolling]);
 
   const toggleUpgradeModal = () => {
     setIsUpgradeModalOpen(!isUpgradeModalOpen);

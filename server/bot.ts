@@ -213,22 +213,6 @@ export async function initBot(token: string, stripe: Stripe | null) {
         // Increment user usage
         await storage.incrementUserUsage(ctx.userId);
         
-        // Notify clients about the new invoice (for dashboard updates)
-        try {
-          const timestamp = Date.now();
-          await fetch('http://localhost:5000/api/notify-invoice-created', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ timestamp }),
-          });
-          console.log(`Notified clients about new invoice creation. ID: ${invoiceId}, Timestamp: ${timestamp}`);
-        } catch (notifyError) {
-          console.error("Failed to notify clients about new invoice:", notifyError);
-          // Continue even if notification fails
-        }
-        
         // Clean up PDF file
         setTimeout(() => {
           fs.unlink(pdfPath, (err) => {

@@ -809,29 +809,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Track last invoice timestamp for real-time updates
-  let lastInvoiceTimestamp = Date.now();
-  
-  // Set last invoice timestamp
-  app.post('/api/notify-invoice-created', express.json(), (req, res) => {
-    const { timestamp } = req.body;
-    
-    if (timestamp && typeof timestamp === 'number') {
-      lastInvoiceTimestamp = timestamp;
-      console.log(`Invoice notification: Updated last invoice timestamp to ${new Date(timestamp).toISOString()}`);
-    } else {
-      lastInvoiceTimestamp = Date.now();
-      console.log(`Invoice notification: Updated last invoice timestamp to ${new Date(lastInvoiceTimestamp).toISOString()}`);
-    }
-    
-    return res.json({ success: true, timestamp: lastInvoiceTimestamp });
-  });
-  
-  // Get last invoice timestamp (for polling)
-  app.get('/api/last-invoice-timestamp', (req, res) => {
-    return res.json({ timestamp: lastInvoiceTimestamp });
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
