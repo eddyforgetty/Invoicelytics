@@ -223,9 +223,9 @@ export default function Home() {
                     Priority support
                   </li>
                 </ul>
-                <Link href="/subscribe">
+                <a href="https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI" target="_blank" rel="noopener noreferrer">
                   <Button className="w-full bg-primary text-white hover:bg-primary/90">Go Pro</Button>
-                </Link>
+                </a>
               </CardContent>
             </Card>
           </div>

@@ -150,7 +150,17 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             type="button"
             className="sm:w-auto w-full"
             onClick={() => {
-              window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+              // Show options and let user choose between Basic and Pro
+              const plan = window.confirm('Choose a plan: Click OK for Pro ($15/mo), or Cancel for Basic ($5/mo)');
+              
+              if (plan) {
+                // User chose Pro plan
+                window.open('https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI', '_blank');
+              } else {
+                // User chose Basic plan
+                window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+              }
+              
               onClose();
             }}
           >
