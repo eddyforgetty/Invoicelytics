@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,9 @@ export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
   const lastInvoiceUpdate = useStore(state => state.lastInvoiceUpdate);
-  const triggerRefresh = useStore(state => state.triggerRefresh);
   const [location, navigate] = useLocation();
   const { toast } = useToast();
   const { logoutMutation } = useAuth();
-  const wsRef = useRef<WebSocket | null>(null);
   
   // Query for fetching invoices - defined before being used in effects
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
@@ -301,119 +299,6 @@ export default function Dashboard() {
       refetch();
     }
   }, [lastInvoiceUpdate, refetch]);
-  
-  // WebSocket connection for real-time updates
-  useEffect(() => {
-    // Create WebSocket connection
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    console.log(`Connecting to WebSocket server at ${wsUrl}`);
-    
-    const socket = new WebSocket(wsUrl);
-    wsRef.current = socket;
-    
-    // Connection opened
-    socket.addEventListener('open', (event) => {
-      console.log('Connected to WebSocket server');
-      // Send a ping message to keep the connection alive
-      socket.send(JSON.stringify({ type: 'ping' }));
-    });
-    
-    // Listen for messages
-    socket.addEventListener('message', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
-        
-        if (data.type === 'invoice-created' || data.type === 'invoice-updated') {
-          console.log(`Real-time update received: ${data.type}`, data.invoice);
-          
-          // Update the invoice in the React Query cache if it exists
-          if (data.invoice) {
-            // For invoice created events, add to or update the list
-            if (data.type === 'invoice-created') {
-              queryClient.setQueryData(["/api/invoices"], (oldData: Invoice[] | undefined) => {
-                if (!oldData) return [data.invoice];
-                
-                // Check if the invoice already exists
-                const exists = oldData.some(item => item.invoiceId === data.invoice.invoiceId);
-                if (exists) {
-                  // Update existing invoice
-                  return oldData.map(item => 
-                    item.invoiceId === data.invoice.invoiceId ? data.invoice : item
-                  );
-                } else {
-                  // Add new invoice
-                  return [...oldData, data.invoice];
-                }
-              });
-            }
-            
-            // For invoice updated events, update the existing invoice
-            if (data.type === 'invoice-updated') {
-              queryClient.setQueryData(["/api/invoices"], (oldData: Invoice[] | undefined) => {
-                if (!oldData) return [data.invoice];
-                
-                return oldData.map(item => 
-                  item.invoiceId === data.invoice.invoiceId ? data.invoice : item
-                );
-              });
-              
-              // Also update the individual invoice cache
-              queryClient.setQueryData([`/api/invoices/${data.invoice.invoiceId}`], data.invoice);
-            }
-            
-            // Show a toast notification for the update
-            if (data.type === 'invoice-created') {
-              toast({
-                title: "New Invoice Created",
-                description: `Invoice #${data.invoice.invoiceId} for ${data.invoice.clientName} has been created.`,
-                variant: "default",
-              });
-            } else if (data.type === 'invoice-updated') {
-              toast({
-                title: "Invoice Updated",
-                description: `Invoice #${data.invoice.invoiceId} status is now ${data.invoice.status}.`,
-                variant: "default",
-              });
-            }
-            
-            // Trigger a refetch to ensure we have the latest data
-            triggerRefresh();
-          }
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    });
-    
-    // Connection closed
-    socket.addEventListener('close', (event) => {
-      console.log('WebSocket connection closed', event);
-    });
-    
-    // Connection error
-    socket.addEventListener('error', (event) => {
-      console.error('WebSocket error:', event);
-    });
-    
-    // Set up a ping interval to keep the connection alive
-    const pingInterval = setInterval(() => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-      }
-    }, 30000); // Send ping every 30 seconds
-    
-    // Clean up function
-    return () => {
-      clearInterval(pingInterval);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [toast, triggerRefresh]); // Include dependencies used in the effect
 
   const toggleUpgradeModal = () => {
     setIsUpgradeModalOpen(!isUpgradeModalOpen);

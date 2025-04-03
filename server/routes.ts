@@ -1,13 +1,12 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
-import { storage, storageEvents } from "./storage";
+import { storage } from "./storage";
 import { createInvoiceSchema } from "@shared/schema";
 import { ZodError, z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { initBot } from "./bot";
 import { setupAuth } from "./auth";
-import { WebSocketServer, WebSocket } from "ws";
 
 // Type definitions for Stripe expanded objects
 interface ExpandedPaymentIntent {
@@ -715,78 +714,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Debug endpoint to list all users
-  app.get('/api/debug/users', async (req, res) => {
-    try {
-      // Get all users from the database
-      const users = await storage.getAllUsers();
-      console.log("Fetched all users for debugging:", users);
-      
-      // Return the users without sensitive information
-      const safeUsers = users.map(user => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        tier: user.tier,
-        telegramId: user.telegramId,
-        telegramUsername: user.telegramUsername,
-        stripeCustomerId: user.stripeCustomerId,
-        stripeSubscriptionId: user.stripeSubscriptionId,
-        currentUsage: user.currentUsage,
-        resetDate: user.resetDate,
-        password: user.password ? '[REDACTED]' : null,
-      }));
-      
-      // Ensure proper content type
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).json(safeUsers);
-    } catch (error) {
-      console.error("Error getting all users:", error);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500).json({ error: "Failed to retrieve users" });
-    }
-  });
-  
-  // Debug endpoint to get a specific user by email with full details
-  app.get('/api/debug/user/:email', async (req, res) => {
-    try {
-      const email = req.params.email;
-      
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
-      }
-      
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      // Include password hash for debugging purposes
-      const userDetails = {
-        ...user,
-        passwordFormat: user.password ? {
-          format: user.password.includes(':') ? 'salt:hash' : 'unknown',
-          length: user.password.length,
-          hashParts: user.password.split(':').map(part => ({ part: part.substring(0, 10) + '...', length: part.length }))
-        } : null
-      };
-      
-      res.setHeader('Content-Type', 'application/json');
-      res.status(200).json(userDetails);
-    } catch (error) {
-      console.error(`Error getting user details:`, error);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500).json({ error: "Failed to retrieve user details" });
-    }
-  });
-  
-  // Debug endpoint to test simple JSON responses
-  app.get('/api/debug/test', (req, res) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.send(JSON.stringify({ message: "Debug API is working", timestamp: new Date().toISOString() }));
-  });
-  
   // Create or get subscription API endpoint
   app.post('/api/get-or-create-subscription', async (req, res) => {
     if (!stripe) {
@@ -892,63 +819,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
-  
-  // Setup WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  console.log("WebSocket server initialized at path /ws");
-  
-  wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
-    
-    // Send initial confirmation
-    ws.send(JSON.stringify({ type: 'connected', message: 'Connected to InvoiceLyticsBot WebSocket server' }));
-    
-    // Handle client messages
-    ws.on('message', (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        console.log('Received WebSocket message:', data);
-        
-        // Handle different message types as needed
-        if (data.type === 'ping') {
-          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-      }
-    });
-    
-    // Handle client disconnection
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-    });
-  });
-  
-  // Set up event listeners for real-time updates
-  storageEvents.on('invoice-created', (invoice) => {
-    console.log(`Broadcasting invoice created event for invoice ${invoice.invoiceId}`);
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'invoice-created',
-          invoice
-        }));
-      }
-    });
-  });
-  
-  storageEvents.on('invoice-updated', (invoice) => {
-    console.log(`Broadcasting invoice updated event for invoice ${invoice.invoiceId}`);
-    wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify({
-          type: 'invoice-updated',
-          invoice
-        }));
-      }
-    });
-  });
-
   return httpServer;
 }
