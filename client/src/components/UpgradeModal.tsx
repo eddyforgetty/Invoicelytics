@@ -149,6 +149,10 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           <Button 
             type="button"
             className="sm:w-auto w-full"
+            onClick={() => {
+              window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+              onClose();
+            }}
           >
             Choose a Plan
           </Button>

@@ -181,9 +181,9 @@ export default function Home() {
                     Invoice reminders
                   </li>
                 </ul>
-                <Link href="/subscribe">
+                <a href="https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b" target="_blank" rel="noopener noreferrer">
                   <Button className="w-full bg-primary text-white hover:bg-primary/90">Upgrade Now</Button>
-                </Link>
+                </a>
               </CardContent>
             </Card>
 
