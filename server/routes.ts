@@ -1,12 +1,13 @@
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
-import { storage } from "./storage";
+import { storage, storageEvents } from "./storage";
 import { createInvoiceSchema } from "@shared/schema";
 import { ZodError, z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { initBot } from "./bot";
 import { setupAuth } from "./auth";
+import { WebSocketServer, WebSocket } from "ws";
 
 // Type definitions for Stripe expanded objects
 interface ExpandedPaymentIntent {
@@ -891,5 +892,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Setup WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  console.log("WebSocket server initialized at path /ws");
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    
+    // Send initial confirmation
+    ws.send(JSON.stringify({ type: 'connected', message: 'Connected to InvoiceLyticsBot WebSocket server' }));
+    
+    // Handle client messages
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log('Received WebSocket message:', data);
+        
+        // Handle different message types as needed
+        if (data.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+    
+    // Handle client disconnection
+    ws.on('close', () => {
+      console.log('WebSocket client disconnected');
+    });
+  });
+  
+  // Set up event listeners for real-time updates
+  storageEvents.on('invoice-created', (invoice) => {
+    console.log(`Broadcasting invoice created event for invoice ${invoice.invoiceId}`);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'invoice-created',
+          invoice
+        }));
+      }
+    });
+  });
+  
+  storageEvents.on('invoice-updated', (invoice) => {
+    console.log(`Broadcasting invoice updated event for invoice ${invoice.invoiceId}`);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: 'invoice-updated',
+          invoice
+        }));
+      }
+    });
+  });
+
   return httpServer;
 }

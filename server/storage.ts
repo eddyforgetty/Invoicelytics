@@ -47,6 +47,11 @@ async function setToDB<T>(key: string, value: T): Promise<void> {
   }
 }
 
+// Event emitter for real-time updates
+import { EventEmitter } from 'events';
+
+export const storageEvents = new EventEmitter();
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -304,6 +309,10 @@ export class ReplitDBStorage implements IStorage {
         await this.incrementUserUsage(invoice.userId);
       }
       
+      // Emit event for real-time updates
+      storageEvents.emit('invoice-created', invoice);
+      console.log(`Event emitted: invoice-created for invoice ${invoice.invoiceId}`);
+      
       return invoice;
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -324,6 +333,11 @@ export class ReplitDBStorage implements IStorage {
       };
 
       await setToDB(`${this.invoicePrefix}${invoiceId}`, updatedInvoice);
+      
+      // Emit event for real-time updates
+      storageEvents.emit('invoice-updated', updatedInvoice);
+      console.log(`Event emitted: invoice-updated for invoice ${invoiceId}`);
+      
       return updatedInvoice;
     } catch (error) {
       console.error(`Error updating invoice status for ${invoiceId}:`, error);
