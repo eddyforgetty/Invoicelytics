@@ -42,7 +42,7 @@ export default function BotInterface() {
         response = "Usage: /status [invoice_id]";
       }
     } else if (commandInput.startsWith("/upgrade")) {
-      response = "Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit the dashboard to upgrade.";
+      response = "Plans: $0/mo (Free), $5/mo (Basic - 10 invoices), $15/mo (Pro - unlimited). Visit the dashboard to upgrade or use these direct links: Free: https://buy.stripe.com/test_5kAeXG6FN4D07TieV0, Basic: https://buy.stripe.com/test_aEUdTCe8f1qO8Xm28f, Pro: https://buy.stripe.com/test_7sIeXG8NV7Pc3D2dQY";
     }
     
     // Add to history
