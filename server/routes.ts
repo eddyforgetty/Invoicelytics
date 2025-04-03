@@ -432,9 +432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // Handle payment_intent.succeeded (for direct PaymentElement with 3D Secure)
-    // Also handle payment_link.payment_intent.succeeded (for payment links)
-    else if (event.type === 'payment_intent.succeeded' || event.type === 'payment_link.payment_intent.succeeded') {
+    // Handle payment_intent.succeeded (for both direct PaymentElement with 3D Secure and Payment Links)
+    else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
       console.log(`${event.type} event received:`, paymentIntent.id);
       
@@ -670,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log('Webhook test event received:', event.type);
     
-    if (event.type === 'payment_link.payment_intent.succeeded') {
+    if (event.type === 'payment_intent.succeeded') {
       console.log('Payment succeeded via test webhook:', event.data.object);
     }
     
