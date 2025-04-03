@@ -47,7 +47,8 @@ const InvoicePaymentForm = ({ amount, invoiceId, onSuccess, onCancel }: InvoiceP
         elements,
         confirmParams: {
           // Add return_url to redirect back after 3D Secure authentication
-          return_url: `${window.location.origin}/dashboard?invoice=${invoiceId}&success=true`,
+          // Include additional parameters to help identify the invoice on return
+          return_url: `${window.location.origin}/dashboard?invoice=${invoiceId}&success=true&source=3ds&t=${Date.now()}`,
         },
       });
 

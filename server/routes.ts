@@ -437,12 +437,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paymentIntent = event.data.object;
       console.log("Payment intent succeeded:", paymentIntent.id);
       
-      // Get invoice ID from metadata
+      // Get invoice ID from metadata - this is our primary way to identify the invoice
       const invoiceId = paymentIntent.metadata?.invoiceId;
       
       if (invoiceId) {
         console.log(`Found invoice ID ${invoiceId} in payment intent metadata`);
-        await updateInvoiceStatus(invoiceId, 'paid', res);
+        
+        // Verify the invoice exists before updating
+        const invoice = await storage.getInvoiceById(invoiceId);
+        if (invoice) {
+          console.log(`Webhook: Invoice ${invoiceId} found, updating status to paid`);
+          await updateInvoiceStatus(invoiceId, 'paid', res);
+        } else {
+          console.error(`Webhook: Invoice ${invoiceId} from payment intent metadata not found in database`);
+          return res.json({
+            received: true,
+            processed: false,
+            reason: "Invoice ID in metadata not found in database"
+          });
+        }
       } else {
         console.log("No invoice ID found in payment intent metadata");
         return res.json({
