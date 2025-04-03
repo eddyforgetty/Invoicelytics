@@ -8,7 +8,18 @@ const db = new Database();
 async function getFromDB<T>(key: string, defaultValue: T): Promise<T> {
   try {
     const value = await db.get(key);
-    return value !== null ? value as T : defaultValue;
+    if (value === null || value === undefined) {
+      // If we're expecting an array but got null/undefined, ensure we return a new array
+      if (Array.isArray(defaultValue)) {
+        console.log(`Initializing ${key} as empty array`);
+        await db.set(key, []);
+        return [] as unknown as T;
+      }
+      return defaultValue;
+    }
+    
+    // Return the value as the expected type
+    return value as T;
   } catch (error) {
     console.error(`Error retrieving ${key} from database:`, error);
     return defaultValue;

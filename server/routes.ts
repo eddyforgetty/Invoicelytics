@@ -505,18 +505,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle invoice.payment_succeeded (for subscriptions)
       else if (event.type === 'invoice.payment_succeeded') {
         try {
-          const invoice = event.data.object;
-          console.log("Webhook: Invoice payment succeeded:", invoice.id);
+          const invoiceData: any = event.data.object;
+          console.log("Webhook: Invoice payment succeeded:", invoiceData.id);
           
           // Check if this is a subscription-related invoice
-          if (invoice.subscription) {
-            const subscriptionId = invoice.subscription;
+          if (invoiceData.subscription) {
+            const subscriptionId = invoiceData.subscription;
             console.log(`Webhook: Subscription ${subscriptionId} payment succeeded`);
             
             // Try to find customer email in the invoice
-            if (invoice.customer_email || invoice.customer) {
-              const customerEmail = invoice.customer_email;
-              const customerId = invoice.customer;
+            if (invoiceData.customer_email || invoiceData.customer) {
+              const customerEmail = invoiceData.customer_email;
+              const customerId = invoiceData.customer;
               
               console.log(`Webhook: Subscription paid for customer ${customerEmail || customerId}`);
               
