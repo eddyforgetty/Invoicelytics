@@ -466,8 +466,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const paymentIntent = event.data.object;
           console.log("Webhook: Payment intent succeeded:", paymentIntent.id);
           
+          // If we have the full payment intent from the webhook, use it directly
+          let paymentIntentData = paymentIntent;
+          
+          // Double-check by retrieving the payment intent from Stripe API for complete data
+          // Stripe's webhook payloads may not always include complete metadata
+          if (stripe && paymentIntent.id) {
+            try {
+              const retrievedIntent = await stripe.paymentIntents.retrieve(paymentIntent.id);
+              console.log(`Webhook: Successfully retrieved payment intent ${paymentIntent.id} from Stripe API`);
+              paymentIntentData = retrievedIntent;
+            } catch (retrieveError: any) {
+              // Handle potential Stripe API errors
+              if (retrieveError.type === 'StripeInvalidRequestError') {
+                console.error(`Webhook: Payment Intent not found in Stripe: ${retrieveError.message}`);
+                // Continue with the webhook payload data
+              } else {
+                console.error(`Webhook: Error retrieving payment intent: ${retrieveError.message}`);
+                // Continue with the webhook payload data
+              }
+            }
+          }
+          
           // Get invoice ID from metadata - this is our primary way to identify the invoice
-          const invoiceId = paymentIntent.metadata?.invoiceId;
+          const invoiceId = paymentIntentData.metadata?.invoiceId;
           
           if (invoiceId) {
             console.log(`Webhook: Found invoice ID ${invoiceId} in payment intent metadata`);
@@ -487,9 +509,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             console.log("Webhook: No invoice ID found in payment intent metadata");
+            
+            // As a fallback, we could potentially look up invoices by customer ID or other means
+            // This would require additional storage interfaces and more complex logic
+            console.log("Webhook: No fallback invoice identification method available");
           }
-        } catch (error) {
-          console.error("Webhook: Error processing payment_intent.succeeded:", error);
+        } catch (error: any) {
+          console.error("Webhook: Error processing payment_intent.succeeded:", error.message || error);
         }
       }
       
