@@ -47,9 +47,22 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 Stripe payment links
               </li>
             </ul>
-            <div className="text-center">
-              <span className="text-gray-800 font-medium">$0</span>
-              <span className="text-gray-500 text-sm">/month</span>
+            <div className="flex flex-col items-center space-y-3">
+              <div>
+                <span className="text-gray-800 font-medium">$0</span>
+                <span className="text-gray-500 text-sm">/month</span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_7sI4j24xF3yW5La4gl', '_blank');
+                  onClose();
+                }}
+              >
+                Free Tier
+              </Button>
             </div>
           </div>
           
@@ -89,9 +102,21 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 Invoice reminders
               </li>
             </ul>
-            <div className="text-center">
-              <span className="text-gray-800 font-medium">$5</span>
-              <span className="text-gray-500 text-sm">/month</span>
+            <div className="flex flex-col items-center space-y-3">
+              <div>
+                <span className="text-gray-800 font-medium">$5</span>
+                <span className="text-gray-500 text-sm">/month</span>
+              </div>
+              <Button 
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+                  onClose();
+                }}
+              >
+                Upgrade to Basic
+              </Button>
             </div>
           </div>
           
@@ -99,6 +124,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-medium">Pro Plan</h3>
+              <span className="text-xs bg-violet-100 px-2 py-1 rounded-full text-violet-700">Ultimate</span>
             </div>
             <ul className="text-sm text-gray-600 space-y-2 mb-3">
               <li className="flex items-center">
@@ -130,52 +156,34 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 Priority support
               </li>
             </ul>
-            <div className="text-center">
-              <span className="text-gray-800 font-medium">$15</span>
-              <span className="text-gray-500 text-sm">/month</span>
+            <div className="flex flex-col items-center space-y-3">
+              <div>
+                <span className="text-gray-800 font-medium">$15</span>
+                <span className="text-gray-500 text-sm">/month</span>
+              </div>
+              <Button 
+                size="sm"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI', '_blank');
+                  onClose();
+                }}
+              >
+                Upgrade to Pro
+              </Button>
             </div>
           </div>
         </div>
         
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex justify-center">
           <Button 
             type="button" 
             variant="outline" 
             onClick={onClose}
-            className="sm:w-auto w-full"
+            className="w-1/2"
           >
-            Maybe Later
-          </Button>
-          <Button 
-            type="button"
-            className="sm:w-auto w-full"
-            onClick={() => {
-              // Show options and let user choose between tiers
-              const choice = prompt('Choose a plan (enter the number):\n1: Free \n2: Basic ($5/mo)\n3: Pro ($15/mo)');
-              
-              switch(choice) {
-                case '1':
-                  // Free plan
-                  window.open('https://buy.stripe.com/test_7sI4j24xF3yW5La4gl', '_blank');
-                  break;
-                case '2':
-                  // Basic plan
-                  window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
-                  break;
-                case '3':
-                  // Pro plan
-                  window.open('https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI', '_blank');
-                  break;
-                default:
-                  // No selection or invalid input
-                  onClose();
-                  return;
-              }
-              
-              onClose();
-            }}
-          >
-            Choose a Plan
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
