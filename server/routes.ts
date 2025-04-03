@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to update invoice status" });
     }
   });
-
+  
   // Direct API endpoint to update invoice status - used by frontend to force-refresh status
   app.post('/api/force-update-invoice-status', async (req, res) => {
     try {
