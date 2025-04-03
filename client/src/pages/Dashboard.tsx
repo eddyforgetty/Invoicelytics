@@ -84,18 +84,78 @@ export default function Dashboard() {
     const success = params.get('success');
     const error = params.get('error');
     const canceled = params.get('canceled');
-    const invoiceId = params.get('id');
+    const invoiceId = params.get('invoice') || params.get('id'); // Support both 'invoice' and 'id' parameters
+    const source = params.get('source'); // Check the source (e.g., '3ds' for 3D Secure returns)
     const sync = params.get('sync') === 'true';
+    const paymentMethod = params.get('payment_method');
     
-    // If we have an invoice ID and the sync flag, check status immediately
-    if (invoiceId && sync) {
+    // Clean URL parameters if they exist
+    if (window.history && (success || error || canceled || invoiceId || source)) {
+      // Create a URL without the query parameters
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+    
+    // Handle 3D Secure returns (these come from Stripe after authentication)
+    if (source === '3ds' && invoiceId && success === 'true') {
+      console.log(`3D Secure return detected for invoice ${invoiceId}`);
+      
+      // Show a loading toast
+      toast({
+        title: "Verifying Payment",
+        description: "Please wait while we verify your payment...",
+      });
+      
+      // Set up aggressive polling to check for webhook updates
+      console.log(`Aggressively polling invoice ${invoiceId} for status changes after 3D Secure...`);
+      
+      // Immediate first check
+      checkAndUpdateInvoiceStatus(invoiceId).then(invoice => {
+        if (invoice?.status === 'paid') {
+          toast({
+            title: "Payment Successful",
+            description: "Your payment has been processed successfully and the invoice is marked as paid.",
+            variant: "default",
+          });
+          setActiveTab("paid");
+        }
+      });
+      
+      // Continue polling for 15 seconds (webhook processing may take time)
+      const pollInterval = setInterval(async () => {
+        console.log(`Polling invoice ${invoiceId} status...`);
+        const updatedInvoice = await checkAndUpdateInvoiceStatus(invoiceId);
+        
+        if (updatedInvoice?.status === 'paid') {
+          clearInterval(pollInterval);
+          console.log("Invoice marked as paid, stopping polling");
+          
+          toast({
+            title: "Payment Successful",
+            description: "Your invoice has been updated and marked as paid.",
+            variant: "default",
+          });
+          
+          setActiveTab("paid");
+        }
+      }, 1500);
+      
+      // Clear polling after 15 seconds regardless of result
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        console.log("3D Secure return polling complete");
+      }, 15000);
+    }
+    // Standard invoice status check with sync flag
+    else if (invoiceId && sync) {
       console.log(`Sync flag detected, immediately checking invoice ${invoiceId} status`);
+      
       // Initial check
       checkAndUpdateInvoiceStatus(invoiceId).then(invoice => {
         console.log("Direct status check complete, invoice:", invoice);
       });
       
-      // Set up aggressive polling for 10 seconds
+      // Set up polling for 10 seconds
       const pollInterval = setInterval(() => {
         console.log(`Polling invoice ${invoiceId} status...`);
         checkAndUpdateInvoiceStatus(invoiceId);
@@ -108,7 +168,7 @@ export default function Dashboard() {
       }, 10000);
     }
     
-    // Show appropriate toast message
+    // Show appropriate toast message for standard return types
     if (success === 'payment-complete') {
       toast({
         title: "Payment Successful",

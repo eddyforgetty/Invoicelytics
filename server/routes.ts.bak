@@ -388,57 +388,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the event data from the request body
       const event = req.body;
       
-      // Enhanced validation: check for required fields in the event
-      if (!event || !event.type || !event.data || !event.data.object) {
-        console.error('Webhook: Invalid event structure received:', JSON.stringify(event).substring(0, 200) + '...');
+      // Validate the event
+      if (!event || !event.type) {
+        console.error('Webhook: Invalid event received:', event);
         return res.sendStatus(200); // Return 200 for invalid requests too
       }
       
-      console.log("Webhook received:", event.type, "ID:", event.id || 'unknown');
+      console.log("Webhook received:", event.type);
       
       // Handle the event based on its type
       // Handle checkout.session.completed (for legacy checkout links)
       if (event.type === 'checkout.session.completed') {
         try {
           const session = event.data.object;
-          console.log("Webhook: Checkout session completed:", session.id);
+          console.log("Checkout session completed:", session.id);
           
-          // Check if there's metadata with invoiceId (preferred method)
-          let invoiceId = session.metadata?.invoiceId;
+          // Extract the invoice ID from the success URL
+          const successUrl = session.success_url;
+          console.log("Success URL from webhook:", successUrl);
           
-          // If no metadata, try extracting from success URL (backup method)
-          if (!invoiceId && session.success_url) {
-            const successUrl = session.success_url;
-            console.log("Webhook: Checking success URL for invoice ID:", successUrl);
-            
-            // Try multiple regex patterns to extract the invoice ID
-            // Check the standard pattern
-            let match = successUrl.match(/invoice-paid\?id=([^&]+)/);
+          // Try multiple regex patterns to extract the invoice ID
+          let invoiceId = null;
+          
+          // Check the standard pattern
+          let match = successUrl?.match(/invoice-paid\?id=([^&]+)/);
+          if (match && match[1]) {
+            invoiceId = match[1];
+          } 
+          // Check for other possible patterns if needed
+          else if (successUrl?.includes('id=')) {
+            match = successUrl.match(/id=([^&]+)/);
             if (match && match[1]) {
               invoiceId = match[1];
-            } 
-            // Check for other possible patterns if needed
-            else if (successUrl.includes('id=')) {
-              match = successUrl.match(/id=([^&]+)/);
-              if (match && match[1]) {
-                invoiceId = match[1];
-              }
             }
           }
           
           if (invoiceId) {
-            console.log(`Webhook: Found invoice ID ${invoiceId}, verifying it exists`);
-            
-            // Verify the invoice exists before updating
-            const invoice = await storage.getInvoiceById(invoiceId);
-            if (invoice) {
-              console.log(`Webhook: Invoice ${invoiceId} found, updating status to paid`);
-              await updateInvoiceStatus(invoiceId, 'paid');
-            } else {
-              console.error(`Webhook: Invoice ${invoiceId} not found in database`);
-            }
+            await updateInvoiceStatus(invoiceId, 'paid');
           } else {
-            console.error("Webhook: Could not extract invoice ID from session metadata or success URL");
+            console.error("Webhook: Could not extract invoice ID from success URL:", successUrl);
           }
         } catch (error) {
           console.error("Webhook: Error processing checkout.session.completed:", error);
@@ -449,7 +437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (event.type === 'payment_intent.succeeded') {
         try {
           const paymentIntent = event.data.object;
-          console.log("Webhook: Payment intent succeeded:", paymentIntent.id);
+          console.log("Payment intent succeeded:", paymentIntent.id);
           
           // Get invoice ID from metadata - this is our primary way to identify the invoice
           const invoiceId = paymentIntent.metadata?.invoiceId;
@@ -460,13 +448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Verify the invoice exists before updating
             const invoice = await storage.getInvoiceById(invoiceId);
             if (invoice) {
-              // Check if invoice is already paid to avoid duplicate updates
-              if (invoice.status === 'paid') {
-                console.log(`Webhook: Invoice ${invoiceId} is already marked as paid, skipping update`);
-              } else {
-                console.log(`Webhook: Invoice ${invoiceId} found, updating status to paid`);
-                await updateInvoiceStatus(invoiceId, 'paid');
-              }
+              console.log(`Webhook: Invoice ${invoiceId} found, updating status to paid`);
+              await updateInvoiceStatus(invoiceId, 'paid');
             } else {
               console.error(`Webhook: Invoice ${invoiceId} from payment intent metadata not found in database`);
             }
@@ -482,24 +465,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (event.type === 'invoice.payment_succeeded') {
         try {
           const invoice = event.data.object;
-          console.log("Webhook: Invoice payment succeeded:", invoice.id);
+          console.log("Invoice payment succeeded:", invoice.id);
           
           // Check if this is a subscription-related invoice
           if (invoice.subscription) {
             const subscriptionId = invoice.subscription;
             console.log(`Webhook: Subscription ${subscriptionId} payment succeeded`);
             
-            // Try to find customer email in the invoice
-            if (invoice.customer_email || invoice.customer) {
-              const customerEmail = invoice.customer_email;
-              const customerId = invoice.customer;
-              
-              console.log(`Webhook: Subscription paid for customer ${customerEmail || customerId}`);
-              
-              // Future enhancement: Update user subscription status based on email or customer ID
-              // await storage.updateUserSubscription(email, subscriptionId, 'active');
-            }
-            
+            // Find user with this subscription ID and update their tier
+            // This would require a new method in storage.ts
+            // For now, we'll just log this event
             console.log(`Webhook: Subscription ${subscriptionId} was paid successfully`);
           }
         } catch (error) {

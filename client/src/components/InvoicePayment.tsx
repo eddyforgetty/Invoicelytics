@@ -47,8 +47,17 @@ const InvoicePaymentForm = ({ amount, invoiceId, onSuccess, onCancel }: InvoiceP
         elements,
         confirmParams: {
           // Add return_url to redirect back after 3D Secure authentication
-          // Include additional parameters to help identify the invoice on return
-          return_url: `${window.location.origin}/dashboard?invoice=${invoiceId}&success=true&source=3ds&t=${Date.now()}`,
+          // Include more identifying parameters for improved webhook processing
+          return_url: `${window.location.origin}/dashboard?invoice=${invoiceId}&success=true&source=3ds&payment_method=card&t=${Date.now()}`,
+          
+          // Add metadata to help identify this payment 
+          payment_method_data: {
+            billing_details: {
+              // Set a default description for the payment that appears on statements
+              // This helps users identify the charge on their statement
+              name: `Invoice #${invoiceId}`
+            }
+          }
         },
       });
 
