@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,37 @@ export default function InvoiceDetail() {
     }
   };
 
-  const triggerRefresh = useStore(state => state.triggerRefresh);
+  const { 
+    lastInvoiceUpdate, 
+    startPolling, 
+    stopPolling,
+    triggerRefresh 
+  } = useStore(state => ({
+    lastInvoiceUpdate: state.lastInvoiceUpdate,
+    startPolling: state.startPolling,
+    stopPolling: state.stopPolling,
+    triggerRefresh: state.triggerRefresh
+  }));
+  
+  // Start and stop polling for invoice updates
+  useEffect(() => {
+    console.log("Starting invoice update polling from InvoiceDetail");
+    startPolling();
+    
+    // Clean up polling when component unmounts
+    return () => {
+      console.log("Stopping invoice update polling from InvoiceDetail");
+      stopPolling();
+    };
+  }, [startPolling, stopPolling]);
+  
+  // Effect to refetch when lastInvoiceUpdate changes
+  useEffect(() => {
+    if (lastInvoiceUpdate && invoiceId) {
+      console.log(`InvoiceDetail: Refetching invoice ${invoiceId} due to lastInvoiceUpdate change`);
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+    }
+  }, [lastInvoiceUpdate, invoiceId]);
 
   const updateStatus = async (status: string) => {
     if (!invoiceId) return;
