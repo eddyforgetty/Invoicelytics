@@ -1,8 +1,9 @@
 import { Express } from "express";
 import session from "express-session";
 import MemoryStore from 'memorystore';
-import { storage } from "./storage";
+import { IStorage } from "./storage";
 import { User } from "@shared/schema";
+import Stripe from "stripe";
 
 // Extend Express Session type
 declare module 'express-session' {
@@ -12,7 +13,7 @@ declare module 'express-session' {
   }
 }
 
-export function setupAuth(app: Express) {
+export function setupAuth(app: Express, storageService: IStorage, stripeClient: Stripe | null = null) {
   // Set up session middleware
   const SessionStore = MemoryStore(session);
   app.use(session({
@@ -33,7 +34,7 @@ export function setupAuth(app: Express) {
       }
       
       // Find user by email
-      const user = await storage.getUserByEmail(email);
+      const user = await storageService.getUserByEmail(email);
       
       if (!user) {
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -82,19 +83,19 @@ export function setupAuth(app: Express) {
       }
       
       // Check if username already exists
-      const existingUsername = await storage.getUserByUsername(username);
+      const existingUsername = await storageService.getUserByUsername(username);
       if (existingUsername) {
         return res.status(400).json({ success: false, message: 'Username already taken' });
       }
       
       // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(email);
+      const existingEmail = await storageService.getUserByEmail(email);
       if (existingEmail) {
         return res.status(400).json({ success: false, message: 'Email already registered' });
       }
       
       // Create new user
-      const newUser = await storage.createUser({
+      const newUser = await storageService.createUser({
         username,
         email,
         password,

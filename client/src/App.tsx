@@ -9,6 +9,8 @@ import InvoiceDetail from "@/pages/InvoiceDetail";
 import Subscribe from "@/pages/Subscribe";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
@@ -16,9 +18,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/invoice/:id" component={InvoiceDetail} />
-      <Route path="/subscribe" component={Subscribe} />
+      <ProtectedRoute path="/dashboard" component={Dashboard} />
+      <ProtectedRoute path="/invoice/:id" component={InvoiceDetail} />
+      <ProtectedRoute path="/subscribe" component={Subscribe} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
@@ -28,8 +30,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

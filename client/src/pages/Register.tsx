@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 import {
   Form,
@@ -37,9 +36,15 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function Register() {
-  const [isLoading, setIsLoading] = useState(false);
+  const { registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      setLocation('/dashboard');
+    }
+  }, [user, setLocation]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -51,35 +56,13 @@ export default function Register() {
     },
   });
 
-  async function onSubmit(data: RegisterFormValues) {
-    setIsLoading(true);
-    try {
-      const { confirmPassword, ...registerData } = data;
-      const response = await apiRequest("POST", "/api/register", registerData);
-      const result = await response.json();
-      
-      if (response.ok) {
-        toast({
-          title: "Registration successful",
-          description: "Your account has been created. Welcome to InvoiceLyticsBot!",
-        });
+  function onSubmit(data: RegisterFormValues) {
+    const { confirmPassword, ...registerData } = data;
+    registerMutation.mutate(registerData, {
+      onSuccess: () => {
         setLocation("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Registration failed",
-          description: result.message || "Failed to create account",
-        });
       }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Registration error",
-        description: "An error occurred during registration. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   }
 
   return (
@@ -108,7 +91,7 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="johndoe" {...field} disabled={isLoading} />
+                      <Input placeholder="johndoe" {...field} disabled={registerMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,7 +104,7 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} disabled={isLoading} />
+                      <Input placeholder="you@example.com" {...field} disabled={registerMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -134,7 +117,7 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={registerMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -147,14 +130,14 @@ export default function Register() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={registerMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Register"}
+              <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
+                {registerMutation.isPending ? "Creating Account..." : "Register"}
               </Button>
             </form>
           </Form>

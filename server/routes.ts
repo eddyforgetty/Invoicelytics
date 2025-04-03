@@ -42,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Set up authentication with session middleware and auth endpoints
-  setupAuth(app);
+  setupAuth(app, storage, stripe);
 
   // Get all invoices for a user
   app.get("/api/invoices", async (req, res) => {

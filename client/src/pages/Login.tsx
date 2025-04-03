@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useLocation, Link } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 import {
   Form,
@@ -30,9 +29,15 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
-  const [isLoading, setIsLoading] = useState(false);
+  const { loginMutation, user } = useAuth();
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (user) {
+      setLocation('/dashboard');
+    }
+  }, [user, setLocation]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,34 +47,12 @@ export default function Login() {
     },
   });
 
-  async function onSubmit(data: LoginFormValues) {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest("POST", "/api/login", data);
-      const result = await response.json();
-      
-      if (response.ok) {
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${result.username}!`,
-        });
+  function onSubmit(data: LoginFormValues) {
+    loginMutation.mutate(data, {
+      onSuccess: () => {
         setLocation("/dashboard");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: result.message || "Invalid email or password",
-        });
       }
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Login error",
-        description: "An error occurred during login. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   }
 
   return (
@@ -98,7 +81,7 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="you@example.com" {...field} disabled={isLoading} />
+                      <Input placeholder="you@example.com" {...field} disabled={loginMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -111,14 +94,14 @@ export default function Login() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                      <Input type="password" placeholder="••••••••" {...field} disabled={loginMutation.isPending} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+              <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                {loginMutation.isPending ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Form>
