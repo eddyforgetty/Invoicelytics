@@ -432,10 +432,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
-    // Handle payment_intent.succeeded (for both direct PaymentElement with 3D Secure and Payment Links)
+    // Handle payment_intent.succeeded (for direct PaymentElement with 3D Secure)
     else if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object;
-      console.log(`${event.type} event received:`, paymentIntent.id);
+      console.log("Payment intent succeeded:", paymentIntent.id);
       
       // Get invoice ID from metadata
       const invoiceId = paymentIntent.metadata?.invoiceId;
@@ -661,19 +661,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       return res.status(400).send({ error: { message: error.message } });
     }
-  });
-
-  // Simple webhook endpoint for testing Stripe events
-  app.post('/webhook', express.json(), (req, res) => {
-    const event = req.body;
-    
-    console.log('Webhook test event received:', event.type);
-    
-    if (event.type === 'payment_intent.succeeded') {
-      console.log('Payment succeeded via test webhook:', event.data.object);
-    }
-    
-    res.sendStatus(200);
   });
 
   const httpServer = createServer(app);
