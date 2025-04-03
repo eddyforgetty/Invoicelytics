@@ -17,7 +17,17 @@ export default function Home() {
               </svg>
               <h1 className="text-xl font-bold text-white">InvoiceLyticsBot</h1>
             </div>
-            <div>
+            <div className="flex items-center space-x-2">
+              <Link href="/login">
+                <Button variant="outline" className="bg-white/10 text-white hover:bg-white/20 border-white/30">
+                  Login
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button className="bg-white text-primary hover:bg-white/90">
+                  Register
+                </Button>
+              </Link>
               <Link href="/dashboard">
                 <Button variant="outline" className="bg-white/10 text-white hover:bg-white/20 border-white/30">
                   Dashboard
@@ -47,6 +57,19 @@ export default function Home() {
               <Link href="/dashboard">
                 <Button size="lg" variant="outline" className="bg-white/10 text-white hover:bg-white/20 w-full sm:w-auto border-white/30">
                   View Dashboard
+                </Button>
+              </Link>
+            </div>
+            <div className="mt-4 flex justify-center space-x-4">
+              <Link href="/register">
+                <Button variant="link" className="text-white hover:text-white/80">
+                  Register for free account
+                </Button>
+              </Link>
+              <span className="text-white/50 self-center">or</span>
+              <Link href="/login">
+                <Button variant="link" className="text-white hover:text-white/80">
+                  Login to your account
                 </Button>
               </Link>
             </div>
