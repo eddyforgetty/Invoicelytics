@@ -1,0 +1,62 @@
+// Custom starter script for the development workflow
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get the directory of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+function timestamp() {
+  return new Date().toLocaleTimeString();
+}
+
+// Create output handler for process
+function createOutputHandler(prefix, isError = false) {
+  return (data) => {
+    const stream = isError ? process.stderr : process.stdout;
+    stream.write(`${timestamp()} [${prefix}] ${data.toString()}`);
+  };
+}
+
+// Start the server process
+function startServer() {
+  console.log(`${timestamp()} Starting server in development mode...`);
+  
+  // Use node to run the server-start.cjs file
+  const serverProcess = spawn('node', ['server-start.cjs']);
+  
+  // Set up logging
+  serverProcess.stdout.on('data', createOutputHandler('server'));
+  serverProcess.stderr.on('data', createOutputHandler('server', true));
+  
+  // Handle server process exit
+  serverProcess.on('exit', (code) => {
+    console.log(`${timestamp()} Server process exited with code ${code}`);
+    // Don't restart - this is just a diagnostic run
+  });
+  
+  return serverProcess;
+}
+
+// Main function to initialize everything
+function main() {
+  console.log(`${timestamp()} Starting the application...`);
+  
+  // Start the server
+  const serverProcess = startServer();
+  
+  // Graceful shutdown
+  function cleanup() {
+    console.log(`${timestamp()} Shutting down...`);
+    serverProcess.kill();
+    process.exit(0);
+  }
+  
+  // Register cleanup handlers
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+}
+
+// Run the main function
+main();

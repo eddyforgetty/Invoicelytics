@@ -31,13 +31,54 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Telegram bot if token exists (non-blocking)
+  // Enhanced health check API
+  app.get("/api/system-status", (req, res) => {
+    const databaseStatus = process.env.DATABASE_URL ? 'configured' : 'not configured';
+    const stripeStatus = process.env.STRIPE_SECRET_KEY ? 'configured' : 'not configured';
+    const telegramStatus = process.env.TELEGRAM_TOKEN ? 'configured' : 'not configured';
+    
+    return res.json({
+      status: "online",
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      services: {
+        database: databaseStatus,
+        stripe: stripeStatus,
+        telegram: telegramStatus
+      },
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+  
+  // Initialize Telegram bot if token exists (non-blocking) with retry mechanism
   if (process.env.TELEGRAM_TOKEN) {
     console.log("Starting Telegram bot initialization...");
-    // Start bot initialization without awaiting to prevent blocking server startup
-    initBot(process.env.TELEGRAM_TOKEN, stripe)
-      .then(() => console.log("Telegram bot initialized successfully"))
-      .catch(error => console.error("Failed to initialize Telegram bot:", error));
+    
+    // Implement a retry mechanism for bot initialization
+    const initTelegramBot = async (retryCount = 0, maxRetries = 3) => {
+      try {
+        // Start bot initialization without awaiting to prevent blocking server startup
+        await initBot(process.env.TELEGRAM_TOKEN!, stripe);
+        console.log("Telegram bot initialized successfully");
+      } catch (error) {
+        console.error(`Failed to initialize Telegram bot (attempt ${retryCount + 1}/${maxRetries}):`, error);
+        
+        if (retryCount < maxRetries) {
+          console.log(`Retrying Telegram bot initialization in 5 seconds...`);
+          // Wait 5 seconds before retrying
+          setTimeout(() => initTelegramBot(retryCount + 1, maxRetries), 5000);
+        } else {
+          console.error(`Maximum retry attempts (${maxRetries}) reached for Telegram bot initialization`);
+        }
+      }
+    };
+    
+    // Start the initialization process without blocking the server startup
+    initTelegramBot().catch(error => {
+      console.error("Unhandled error in Telegram bot initialization process:", error);
+    });
+  } else {
+    console.log("No Telegram token provided. Bot initialization skipped.");
   }
   
   // User authentication routes
