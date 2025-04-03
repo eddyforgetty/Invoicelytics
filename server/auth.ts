@@ -4,8 +4,6 @@ import MemoryStore from 'memorystore';
 import { IStorage } from "./storage";
 import { User } from "@shared/schema";
 import Stripe from "stripe";
-import CryptoJS from "crypto-js";
-import rateLimit from "express-rate-limit";
 
 // Extend Express Session type
 declare module 'express-session' {
@@ -15,63 +13,19 @@ declare module 'express-session' {
   }
 }
 
-// Password hashing functions
-const hashPassword = (password: string): string => {
-  // Generate a salt
-  const salt = CryptoJS.lib.WordArray.random(128 / 8).toString();
-  
-  // Hash the password with the salt
-  const hash = CryptoJS.PBKDF2(password, salt, {
-    keySize: 512 / 32,
-    iterations: 1000
-  }).toString();
-  
-  // Return the salt and hash together
-  return `${salt}:${hash}`;
-};
-
-const verifyPassword = (password: string, hashedPassword: string): boolean => {
-  // Split stored hash into parts
-  const [salt, storedHash] = hashedPassword.split(':');
-  
-  // Hash the provided password with the stored salt
-  const hash = CryptoJS.PBKDF2(password, salt, {
-    keySize: 512 / 32,
-    iterations: 1000
-  }).toString();
-  
-  // Compare the new hash with the stored hash
-  return hash === storedHash;
-};
-
 export function setupAuth(app: Express, storageService: IStorage, stripeClient: Stripe | null = null) {
   // Set up session middleware
   const SessionStore = MemoryStore(session);
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'invoicelyticsbot-session-secret',
+    secret: 'invoicelyticsbot-session-secret',
     resave: false,
     saveUninitialized: false,
-    cookie: { 
-      secure: process.env.NODE_ENV === 'production', 
-      maxAge: 86400000 // 24 hours
-    },
+    cookie: { secure: false, maxAge: 86400000 }, // 24 hours
     store: new SessionStore({ checkPeriod: 86400000 }) // prune expired entries every 24h
   }));
 
-  // Rate limit for auth endpoints
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 requests per windowMs
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: {
-      success: false,
-      message: 'Too many requests, please try again later.'
-    }
-  });
-
-  // Login endpoint with rate limiting
-  app.post('/api/login', authLimiter, async (req, res) => {
+  // Login endpoint
+  app.post('/api/login', async (req, res) => {
     try {
       const { email, password } = req.body;
       
@@ -83,15 +37,11 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
       const user = await storageService.getUserByEmail(email);
       
       if (!user) {
-        // Use a constant time comparison to prevent timing attacks
-        // We still do a fake verification even if user doesn't exist
-        verifyPassword(password, "dummy:dummy");
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
       
-      // Compare password using secure verification
-      const isPasswordValid = verifyPassword(password, user.password);
-      if (!isPasswordValid) {
+      // Compare password (in a real app, we'd use bcrypt to hash and compare)
+      if (user.password !== password) {
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
       
@@ -102,9 +52,6 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
         email: user.email || '',
       };
       req.session.authenticated = true;
-      
-      // Log the login
-      console.log(`User ${user.username} (ID: ${user.id}) logged in successfully`);
       
       return res.json({ 
         success: true, 
@@ -118,8 +65,8 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
     }
   });
 
-  // Register endpoint with rate limiting
-  app.post('/api/register', authLimiter, async (req, res) => {
+  // Register endpoint
+  app.post('/api/register', async (req, res) => {
     try {
       const { username, email, password } = req.body;
       
@@ -147,14 +94,11 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
         return res.status(400).json({ success: false, message: 'Email already registered' });
       }
       
-      // Hash the password before storing
-      const hashedPassword = hashPassword(password);
-      
-      // Create new user with hashed password
+      // Create new user
       const newUser = await storageService.createUser({
         username,
         email,
-        password: hashedPassword,
+        password,
         telegramId: null,
         telegramUsername: null,
       });
@@ -166,9 +110,6 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
         email: newUser.email || '',
       };
       req.session.authenticated = true;
-      
-      // Log the registration
-      console.log(`New user registered: ${newUser.username} (ID: ${newUser.id})`);
       
       return res.status(201).json({ 
         success: true, 
@@ -200,18 +141,10 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
 
   // Logout endpoint
   app.post('/api/logout', (req, res) => {
-    const username = req.session.user?.username;
-    const userId = req.session.user?.id;
-    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ success: false, message: 'Failed to logout' });
       }
-      
-      if (username && userId) {
-        console.log(`User ${username} (ID: ${userId}) logged out`);
-      }
-      
       res.json({ success: true });
     });
   });
