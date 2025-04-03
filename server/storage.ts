@@ -8,7 +8,30 @@ const db = new Database();
 async function getFromDB<T>(key: string, defaultValue: T): Promise<T> {
   try {
     const value = await db.get(key);
-    return value !== null ? value as T : defaultValue;
+    if (value === null || value === undefined) {
+      return defaultValue;
+    }
+    
+    // Handle Replit DB nested response structure with ok/value pattern
+    if (value && typeof value === 'object' && 'ok' in value && 'value' in value) {
+      // Unwrap the nested structure
+      const nestedValue = (value as any).value;
+      // If we have another level of nesting, unwrap again
+      if (nestedValue && typeof nestedValue === 'object' && 'ok' in nestedValue && 'value' in nestedValue) {
+        return nestedValue.value as T;
+      }
+      return nestedValue as T;
+    }
+    
+    // Handle arrays and objects that need to be hydrated
+    if (typeof defaultValue === 'object' && defaultValue !== null) {
+      if (Array.isArray(defaultValue)) {
+        // Ensure we're returning an array
+        return Array.isArray(value) ? (value as T) : defaultValue;
+      }
+    }
+    
+    return value as T;
   } catch (error) {
     console.error(`Error retrieving ${key} from database:`, error);
     return defaultValue;
@@ -30,6 +53,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
   getAllInvoices(): Promise<Invoice[]>;
   getInvoicesByUserId(userId: number): Promise<Invoice[]>;
   getInvoiceById(invoiceId: string): Promise<Invoice | undefined>;
@@ -59,10 +83,17 @@ export class ReplitDBStorage implements IStorage {
   private async initializeDatabase() {
     try {
       // Initialize counters and lists if they don't exist
-      await getFromDB<number>(this.userIdKey, 1);
-      await getFromDB<number>(this.invoiceIdKey, 1);
-      await getFromDB<number[]>(this.usersListKey, []);
-      await getFromDB<string[]>(this.invoicesListKey, []);
+      const userId = await getFromDB<number>(this.userIdKey, 1);
+      await setToDB(this.userIdKey, userId);
+      
+      const invoiceId = await getFromDB<number>(this.invoiceIdKey, 1);
+      await setToDB(this.invoiceIdKey, invoiceId);
+      
+      const usersList = await getFromDB<number[]>(this.usersListKey, []);
+      await setToDB(this.usersListKey, usersList);
+      
+      const invoicesList = await getFromDB<string[]>(this.invoicesListKey, []);
+      await setToDB(this.invoicesListKey, invoicesList);
 
       console.log("Database initialization complete");
     } catch (error) {
@@ -156,6 +187,25 @@ export class ReplitDBStorage implements IStorage {
     }
   }
 
+  async getAllUsers(): Promise<User[]> {
+    try {
+      const usersList = await getFromDB<number[]>(this.usersListKey, []);
+      const users: User[] = [];
+      
+      for (const userId of usersList) {
+        const user = await this.getUser(userId);
+        if (user) {
+          users.push(user);
+        }
+      }
+      
+      return users;
+    } catch (error) {
+      console.error("Error retrieving all users:", error);
+      return [];
+    }
+  }
+  
   async createUser(insertUser: InsertUser): Promise<User> {
     try {
       const id = await this.getNextUserId();
