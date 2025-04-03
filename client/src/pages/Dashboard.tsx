@@ -11,14 +11,16 @@ import UpgradeModal from "@/components/UpgradeModal";
 import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import type { Invoice } from "@shared/schema";
 
 export default function Dashboard() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("invoices");
   const lastInvoiceUpdate = useStore(state => state.lastInvoiceUpdate);
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const { logoutMutation } = useAuth();
   
   // Query for fetching invoices - defined before being used in effects
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
@@ -183,6 +185,23 @@ export default function Dashboard() {
     setIsUpgradeModalOpen(!isUpgradeModalOpen);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      });
+      navigate("/auth");
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "There was an error logging out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -218,6 +237,19 @@ export default function Dashboard() {
                   Open in Telegram
                 </Button>
               </a>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" x2="9" y1="12" y2="12" />
+                </svg>
+                Logout
+              </Button>
             </div>
           </div>
         </div>
