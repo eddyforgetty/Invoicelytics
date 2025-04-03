@@ -1,11 +1,12 @@
-import express, { type Express } from "express";
+import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import { createInvoiceSchema } from "@shared/schema";
-import { ZodError } from "zod";
+import { ZodError, z } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { initBot } from "./bot";
+import { setupAuth } from "./auth";
 
 // Type definitions for Stripe expanded objects
 interface ExpandedPaymentIntent {
@@ -39,6 +40,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       .then(() => console.log("Telegram bot initialized successfully"))
       .catch(error => console.error("Failed to initialize Telegram bot:", error));
   }
+  
+  // Set up authentication with session middleware and auth endpoints
+  setupAuth(app);
 
   // Get all invoices for a user
   app.get("/api/invoices", async (req, res) => {

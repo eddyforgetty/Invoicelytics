@@ -3,6 +3,7 @@ import { invoices, users, type User, type InsertUser, type Invoice, type InsertI
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   getUserByTelegramId(telegramId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllInvoices(): Promise<Invoice[]>;
@@ -33,6 +34,7 @@ export class MemStorage implements IStorage {
     this.users.set(1, {
       id: 1,
       username: "testuser",
+      email: "test@example.com",
       password: "password",
       telegramId: "123456789",
       telegramUsername: "testuser",
@@ -53,6 +55,12 @@ export class MemStorage implements IStorage {
       (user) => user.username === username,
     );
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
 
   async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
@@ -68,6 +76,7 @@ export class MemStorage implements IStorage {
       currentUsage: 0, 
       resetDate: new Date(),
       tier: "free",
+      email: insertUser.email || null,
       telegramId: insertUser.telegramId || null,
       telegramUsername: insertUser.telegramUsername || null,
       stripeCustomerId: null,
