@@ -379,29 +379,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Stripe webhook for payment notifications
   app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+    if (!stripe) {
+      console.error("Webhook: Stripe is not configured");
+      return res.status(400).json({ error: 'Stripe is not configured' });
+    }
+
+    const sig = req.headers['stripe-signature'];
+    if (!sig) {
+      console.error("Webhook: No Stripe signature found");
+      return res.status(400).json({ error: 'No Stripe signature' });
+    }
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error("Webhook: No webhook secret configured");
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+
     try {
-      if (!stripe) {
-        console.error("Webhook: Stripe is not configured");
-        return res.sendStatus(200); // Return 200 even for config errors
-      }
-  
-      // Get the event data from the raw request body
-      let event;
-      try {
-        // Handle both Buffer and already parsed objects (for testing)
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
-          console.log("Webhook received raw payload and parsed successfully");
-        } else {
-          // Already parsed (mainly for tests or direct API calls)
-          event = req.body;
-          console.log("Webhook received pre-parsed payload");
-        }
-      } catch (err) {
-        console.error("Webhook: Error parsing request body:", err);
-        return res.sendStatus(200); // Still return 200 for parsing errors
-      }
+      const event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+      console.log("Webhook verified and parsed successfully:", event.type);
       
       // Enhanced validation: check for required fields in the event
       if (!event || !event.type || !event.data || !event.data.object) {
