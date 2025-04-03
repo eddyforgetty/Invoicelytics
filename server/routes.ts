@@ -382,25 +382,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!stripe) {
         console.error("Webhook: Stripe is not configured");
-        return res.sendStatus(200); // Return 200 even for config errors
+        return res.status(500).json({ error: "Stripe not configured" });
       }
-  
-      // Get the event data from the raw request body
+
+      const sig = req.headers['stripe-signature'];
+      if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+        console.error("Webhook: Missing signature or webhook secret");
+        return res.status(400).json({ error: "Missing signature" });
+      }
+
+      // Verify webhook signature
       let event;
       try {
-        // Handle both Buffer and already parsed objects (for testing)
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
-          console.log("Webhook received raw payload and parsed successfully");
-        } else {
-          // Already parsed (mainly for tests or direct API calls)
-          event = req.body;
-          console.log("Webhook received pre-parsed payload");
-        }
-      } catch (err) {
-        console.error("Webhook: Error parsing request body:", err);
-        return res.sendStatus(200); // Still return 200 for parsing errors
+        event = stripe.webhooks.constructEvent(
+          req.body,
+          sig,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+        console.log("Webhook signature verified, event:", event.type);
+      } catch (err: any) {
+        console.error("Webhook: Signature verification failed:", err.message);
+        return res.status(400).json({ error: "Invalid signature" });
       }
       
       // Enhanced validation: check for required fields in the event
@@ -416,10 +418,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (event.type === 'checkout.session.completed') {
         try {
           const session = event.data.object;
+          if (!session || typeof session !== 'object') {
+            throw new Error('Invalid session object');
+          }
+          
           console.log("Webhook: Checkout session completed:", session.id);
           
-          // Check if there's metadata with invoiceId (preferred method)
-          let invoiceId = session.metadata?.invoiceId;
+          // Always use metadata for invoice ID
+          const invoiceId = session.metadata?.invoiceId;
+          if (!invoiceId) {
+            throw new Error('Missing invoiceId in session metadata');
+          }
           
           // If no metadata, try extracting from success URL (backup method)
           if (!invoiceId && session.success_url) {
