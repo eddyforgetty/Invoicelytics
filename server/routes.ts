@@ -425,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log("Webhook: Checkout session completed:", session.id);
           
           // Always use metadata for invoice ID
-          const invoiceId = session.metadata?.invoiceId;
+          let invoiceId = session.metadata?.invoiceId;
           if (!invoiceId) {
             throw new Error('Missing invoiceId in session metadata');
           }
