@@ -399,6 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Handle the event
+    // Handle checkout.session.completed (for legacy checkout links)
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       console.log("Checkout session completed:", session.id);
@@ -424,39 +425,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (invoiceId) {
-        console.log(`Updating invoice ${invoiceId} to paid via webhook`);
-        
-        try {
-          // First check if invoice exists
-          const existingInvoice = await storage.getInvoiceById(invoiceId);
-          if (!existingInvoice) {
-            console.error(`Webhook: Invoice not found for ID: ${invoiceId}`);
-            return res.status(404).json({ error: "Invoice not found" });
-          }
-          
-          // Update invoice status
-          const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, 'paid');
-          if (!updatedInvoice) {
-            console.error(`Webhook: Failed to update invoice ${invoiceId}`);
-            return res.status(500).json({ error: "Failed to update invoice" });
-          }
-          
-          console.log(`Webhook: Invoice ${invoiceId} successfully updated to paid`);
-          
-          // Return success with invoice data for debugging
-          return res.json({
-            received: true,
-            updated: true,
-            invoiceId: invoiceId,
-            currentStatus: updatedInvoice.status,
-          });
-        } catch (error) {
-          console.error(`Webhook: Error updating invoice ${invoiceId}:`, error);
-          return res.status(500).json({ error: "Internal server error" });
-        }
+        await updateInvoiceStatus(invoiceId, 'paid', res);
       } else {
         console.error("Webhook: Could not extract invoice ID from success URL:", successUrl);
         return res.status(400).json({ error: "Could not extract invoice ID from success URL" });
+      }
+    }
+    
+    // Handle payment_intent.succeeded (for direct PaymentElement with 3D Secure)
+    else if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      console.log("Payment intent succeeded:", paymentIntent.id);
+      
+      // Get invoice ID from metadata
+      const invoiceId = paymentIntent.metadata?.invoiceId;
+      
+      if (invoiceId) {
+        console.log(`Found invoice ID ${invoiceId} in payment intent metadata`);
+        await updateInvoiceStatus(invoiceId, 'paid', res);
+      } else {
+        console.log("No invoice ID found in payment intent metadata");
+        return res.json({
+          received: true,
+          processed: false,
+          reason: "No invoice ID in metadata"
+        });
+      }
+    }
+    
+    // Handle invoice.payment_succeeded (for subscriptions)
+    else if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      console.log("Invoice payment succeeded:", invoice.id);
+      
+      // Check if this is a subscription-related invoice
+      if (invoice.subscription) {
+        const subscriptionId = invoice.subscription;
+        console.log(`Subscription ${subscriptionId} payment succeeded`);
+        
+        try {
+          // Find user with this subscription ID and update their tier
+          // This would require a new method in storage.ts
+          // For now, we'll just log this event
+          console.log(`Subscription ${subscriptionId} was paid successfully`);
+          
+          return res.json({
+            received: true,
+            processed: true,
+            subscriptionId: subscriptionId
+          });
+        } catch (error) {
+          console.error(`Error handling subscription payment:`, error);
+          return res.status(500).json({ error: "Internal server error" });
+        }
+      }
+    }
+    
+    // Utility function to update invoice status and handle responses
+    async function updateInvoiceStatus(invoiceId: string, status: string, response: any) {
+      console.log(`Updating invoice ${invoiceId} to ${status} via webhook`);
+      
+      try {
+        // First check if invoice exists
+        const existingInvoice = await storage.getInvoiceById(invoiceId);
+        if (!existingInvoice) {
+          console.error(`Webhook: Invoice not found for ID: ${invoiceId}`);
+          return response.status(404).json({ error: "Invoice not found" });
+        }
+        
+        // Update invoice status
+        const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
+        if (!updatedInvoice) {
+          console.error(`Webhook: Failed to update invoice ${invoiceId}`);
+          return response.status(500).json({ error: "Failed to update invoice" });
+        }
+        
+        console.log(`Webhook: Invoice ${invoiceId} successfully updated to ${status}`);
+        
+        // Return success with invoice data for debugging
+        return response.json({
+          received: true,
+          updated: true,
+          invoiceId: invoiceId,
+          currentStatus: updatedInvoice.status,
+        });
+      } catch (error) {
+        console.error(`Webhook: Error updating invoice ${invoiceId}:`, error);
+        return response.status(500).json({ error: "Internal server error" });
       }
     }
     
@@ -464,20 +519,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({received: true, processed: false});
   });
 
-  // Create Payment Intent API endpoint
+  // Create Payment Intent API endpoint with 3D Secure support
   app.post("/api/create-payment-intent", async (req, res) => {
     if (!stripe) {
       return res.status(500).json({ message: "Stripe is not configured" });
     }
 
     try {
-      const { amount } = req.body;
+      const { amount, invoiceId } = req.body;
+      
+      // Create a PaymentIntent with 3D Secure authentication support
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount * 100), // Convert to cents
         currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        payment_method_options: {
+          card: {
+            request_three_d_secure: 'any' // This ensures 3D Secure will be requested if available
+          }
+        },
+        metadata: {
+          invoiceId: invoiceId || '' // Store invoice ID in metadata for webhook processing
+        }
       });
-      res.json({ clientSecret: paymentIntent.client_secret });
+      
+      console.log(`Payment intent created: ${paymentIntent.id} for amount ${amount} with 3D Secure enabled`);
+      
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id 
+      });
     } catch (error: any) {
+      console.error("Error creating payment intent:", error);
       res
         .status(500)
         .json({ message: "Error creating payment intent: " + error.message });
@@ -546,12 +621,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "User data was lost during processing" });
       }
 
+      // Create subscription with improved payment settings for 3D Secure
       const subscription = await stripe.subscriptions.create({
         customer: customer.id,
         items: [{
           price: priceId, 
         }],
         payment_behavior: 'default_incomplete',
+        payment_settings: {
+          payment_method_types: ['card'],
+          save_default_payment_method: 'on_subscription',
+          payment_method_options: {
+            card: {
+              request_three_d_secure: 'any'  // Ensure 3D Secure is used when available
+            }
+          }
+        },
         expand: ['latest_invoice.payment_intent'],
       });
 

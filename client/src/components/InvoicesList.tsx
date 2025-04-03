@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useState } from "react";
+import InvoicePayment from "@/components/InvoicePayment";
 
 interface InvoicesListProps {
   invoices: Invoice[] | undefined;
@@ -24,6 +25,8 @@ interface InvoicesListProps {
 export default function InvoicesList({ invoices, isLoading, filter }: InvoicesListProps) {
   const { toast } = useToast();
   const [updatingInvoiceId, setUpdatingInvoiceId] = useState<string | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   // Function to manually update invoice status for testing
   const updateInvoiceStatus = async (invoiceId: string, status: string) => {
@@ -128,8 +131,36 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
     );
   }
 
+  // Handle payment modal
+  const openPaymentModal = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Force refresh invoices after payment
+    queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+    queryClient.refetchQueries({ queryKey: ['/api/invoices'] });
+    
+    toast({
+      title: "Payment Processing",
+      description: "Your payment is being processed. Invoice status will update shortly.",
+      variant: "default",
+    });
+  };
+  
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Payment Modal */}
+      {selectedInvoice && (
+        <InvoicePayment 
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          invoice={selectedInvoice}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+      
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -207,6 +238,22 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                         </svg>
                       </button>
                     </Link>
+
+                    {/* 3D Secure Pay Button - only shows for pending invoices */}
+                    {invoice.status === 'pending' && (
+                      <button 
+                        className="text-primary hover:text-primary-700" 
+                        title="Pay with Card (3D Secure)"
+                        onClick={() => openPaymentModal(invoice)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-credit-card">
+                          <rect width="20" height="14" x="2" y="5" rx="2" />
+                          <line x1="2" x2="22" y1="10" y2="10" />
+                        </svg>
+                      </button>
+                    )}
+                    
+                    {/* Legacy payment link button */}
                     {invoice.stripePaymentLink && (
                       <button 
                         className="text-gray-500 hover:text-gray-700" 
