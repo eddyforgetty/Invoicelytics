@@ -1,9 +1,0 @@
-{
-  "name": "Test server",
-  "command": "node test-server.js",
-  "restartOn": {
-    "fileChange": [
-      "test-server.js"
-    ]
-  }
-}
