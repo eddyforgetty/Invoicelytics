@@ -150,15 +150,26 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             type="button"
             className="sm:w-auto w-full"
             onClick={() => {
-              // Show options and let user choose between Basic and Pro
-              const plan = window.confirm('Choose a plan: Click OK for Pro ($15/mo), or Cancel for Basic ($5/mo)');
+              // Show options and let user choose between tiers
+              const choice = prompt('Choose a plan (enter the number):\n1: Free \n2: Basic ($5/mo)\n3: Pro ($15/mo)');
               
-              if (plan) {
-                // User chose Pro plan
-                window.open('https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI', '_blank');
-              } else {
-                // User chose Basic plan
-                window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+              switch(choice) {
+                case '1':
+                  // Free plan
+                  window.open('https://buy.stripe.com/test_7sI4j24xF3yW5La4gl', '_blank');
+                  break;
+                case '2':
+                  // Basic plan
+                  window.open('https://buy.stripe.com/test_9AQ9Dm0hp6L8c9y28b', '_blank');
+                  break;
+                case '3':
+                  // Pro plan
+                  window.open('https://buy.stripe.com/test_3cs6ra2pxglI3D2aEI', '_blank');
+                  break;
+                default:
+                  // No selection or invalid input
+                  onClose();
+                  return;
               }
               
               onClose();

@@ -136,8 +136,8 @@ export default function Home() {
                     Stripe payment links
                   </li>
                 </ul>
-                <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
-                  <Button className="w-full btn-primary">Get Started</Button>
+                <a href="https://buy.stripe.com/test_7sI4j24xF3yW5La4gl" target="_blank" rel="noopener noreferrer">
+                  <Button className="w-full btn-primary">Get Started Free</Button>
                 </a>
               </CardContent>
             </Card>
