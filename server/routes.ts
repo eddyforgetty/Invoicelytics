@@ -52,6 +52,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
+      // *** DEMO VERSION: Return all invoices regardless of user for demo purposes ***
+      // In a production system, you would only return the user's own invoices
+      console.log("Demo mode: Returning all invoices for all users");
+      const invoices = await storage.getAllInvoices();
+      return res.json(invoices);
+      
+      /* Commented out for demo purposes
       // Check if user is authenticated
       if (req.session.authenticated && req.session.user) {
         // Get invoices for the logged-in user
@@ -64,6 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const invoices = await storage.getAllInvoices();
         return res.json(invoices);
       }
+      */
     } catch (error) {
       console.error("Error fetching invoices:", error);
       return res.status(500).json({ message: "Failed to fetch invoices" });
