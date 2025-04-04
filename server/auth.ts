@@ -124,13 +124,36 @@ export function setupAuth(app: Express, storageService: IStorage, stripeClient: 
   });
 
   // Get current user
-  app.get('/api/user', (req, res) => {
+  app.get('/api/user', async (req, res) => {
     if (req.session.authenticated && req.session.user) {
-      return res.json({ 
-        success: true, 
-        authenticated: true,
-        user: req.session.user 
-      });
+      try {
+        // Fetch the complete user from storage
+        const fullUser = await storageService.getUser(req.session.user.id);
+        
+        if (fullUser) {
+          // Don't return the password in the response
+          const { password, ...userWithoutPassword } = fullUser;
+          
+          return res.json({ 
+            success: true, 
+            authenticated: true,
+            user: userWithoutPassword 
+          });
+        } else {
+          // User not found in storage (should never happen)
+          console.error(`User with ID ${req.session.user.id} found in session but not in storage`);
+          return res.json({ 
+            success: true, 
+            authenticated: false 
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Error retrieving user information" 
+        });
+      }
     } else {
       return res.json({ 
         success: true, 

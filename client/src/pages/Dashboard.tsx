@@ -22,6 +22,9 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { logoutMutation } = useAuth();
   
+  // Access auth context to get logged-in user information
+  const { user: currentUser } = useAuth();
+  
   // Query for fetching invoices - defined before being used in effects
   const { data: invoices, isLoading, refetch } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
@@ -29,10 +32,16 @@ export default function Dashboard() {
     refetchInterval: 10000, // Refetch data every 10 seconds
     refetchOnMount: true,
     staleTime: 0,
+    enabled: currentUser !== null, // Only fetch invoices when user is logged in
     queryFn: async () => {
       const timestamp = new Date().getTime();
-      const response = await fetch(`/api/invoices?_=${timestamp}`);
+      const response = await fetch(`/api/invoices?_=${timestamp}`, {
+        credentials: 'include' // Ensure cookies are sent with the request
+      });
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('You must be logged in to view invoices');
+        }
         throw new Error('Failed to fetch invoices');
       }
       return response.json();

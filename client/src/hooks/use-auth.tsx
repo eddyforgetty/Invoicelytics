@@ -41,7 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  // Extract the full user object when authenticated
   const user = userData?.authenticated && userData.user ? userData.user : null;
+  console.log("Auth context user data:", user);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {

@@ -52,9 +52,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       
-      // For demo purposes, get all invoices
-      const invoices = await storage.getAllInvoices();
-      return res.json(invoices);
+      // Check if user is authenticated
+      if (req.session.authenticated && req.session.user) {
+        // Get invoices for the logged-in user
+        const userInvoices = await storage.getInvoicesByUserId(req.session.user.id);
+        return res.json(userInvoices);
+      } else {
+        // For demo purposes when not logged in, still return all invoices
+        // This helps with testing but should be removed in production
+        console.log("Warning: Returning all invoices because user is not authenticated");
+        const invoices = await storage.getAllInvoices();
+        return res.json(invoices);
+      }
     } catch (error) {
       console.error("Error fetching invoices:", error);
       return res.status(500).json({ message: "Failed to fetch invoices" });
