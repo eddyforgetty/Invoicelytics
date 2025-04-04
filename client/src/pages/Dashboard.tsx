@@ -419,7 +419,17 @@ export default function Dashboard() {
             {/* Main dashboard */}
             <div className="md:col-span-3 xl:col-span-4">
               <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Dashboard</h1>
+                <div>
+                  <h1 className="text-2xl font-bold">Dashboard</h1>
+                  {currentUser && (
+                    <p className="text-gray-600 mt-1">
+                      Welcome, <span className="font-medium text-primary-600">{currentUser.username}</span>
+                      <span className="inline-flex items-center ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {currentUser.tier ? currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1) : "Free"} Plan
+                      </span>
+                    </p>
+                  )}
+                </div>
                 <Link href="/invoice/new">
                   <Button>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
