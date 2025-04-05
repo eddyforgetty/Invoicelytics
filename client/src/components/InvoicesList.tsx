@@ -132,7 +132,7 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
   }
 
   return (
-    <div className="w-[96vw] sm:w-auto max-w-full mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="w-full mx-auto bg-white rounded-lg shadow-sm overflow-x-auto">
       {/* Mobile Card Layout */}
       <div className="block md:hidden">
         {filteredInvoices.map((invoice) => {
