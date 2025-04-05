@@ -344,8 +344,8 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="container mx-auto px-4">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 w-full">
+        <div className="w-full px-2 sm:px-4">
           <div className="flex flex-wrap justify-between items-center py-3 sm:py-0 sm:h-16">
             <div className="flex items-center">
               <Link href="/">
@@ -359,17 +359,17 @@ export default function Dashboard() {
                 </div>
               </Link>
             </div>
-            <div className="flex items-center space-x-2 md:space-x-4 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+            <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={toggleUpgradeModal}
-                className="text-xs sm:text-sm px-2 sm:px-3"
+                className="text-xs sm:text-sm px-1 sm:px-3"
               >
                 Upgrade
               </Button>
               <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
-                <Button size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                <Button size="sm" className="text-xs sm:text-sm px-1 sm:px-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-1 sm:mr-2">
                     <path d="m22 2-7 20-4-9-9-4Z" />
                     <path d="M22 2 11 13" />
@@ -382,7 +382,7 @@ export default function Dashboard() {
                 variant="ghost" 
                 size="sm" 
                 onClick={handleLogout}
-                className="text-gray-700 text-xs sm:text-sm px-2 sm:px-3"
+                className="text-gray-700 text-xs sm:text-sm px-1 sm:px-3"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-1 sm:mr-2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -398,8 +398,8 @@ export default function Dashboard() {
       </header>
 
       {/* Main content */}
-      <div className="flex-grow bg-gray-50">
-        <div className="container mx-auto px-4 py-6 sm:py-8">
+      <div className="flex-grow bg-gray-50 w-full">
+        <div className="w-full max-w-[1200px] mx-auto px-2 sm:px-4 py-4 sm:py-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6 sm:gap-8">
             {/* Left sidebar */}
             <div className="order-2 md:order-1 md:col-span-2 xl:col-span-1">
@@ -497,8 +497,8 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4">
-        <div className="container mx-auto px-4">
+      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4 w-full">
+        <div className="w-full max-w-[1200px] mx-auto px-2 sm:px-4">
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0">
             <div className="flex items-center space-x-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
