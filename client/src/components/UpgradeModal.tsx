@@ -57,7 +57,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/test_5kAeXG6FN4D07TieV0', '_blank');
+                  window.open('https://buy.stripe.com/14kg135UDeK05iweUW', '_blank');
                   onClose();
                 }}
               >
@@ -111,7 +111,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 size="sm"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/test_aEUdTCe8f1qO8Xm28f', '_blank');
+                  window.open('https://buy.stripe.com/cN23eh5UD0Tah1e7st', '_blank');
                   onClose();
                 }}
               >
@@ -166,7 +166,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 variant="secondary"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/test_7sIeXG8NV7Pc3D2dQY', '_blank');
+                  window.open('https://buy.stripe.com/aEU1692IrdFWdP25kk', '_blank');
                   onClose();
                 }}
               >
