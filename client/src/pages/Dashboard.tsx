@@ -342,55 +342,53 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen max-w-[100vw] overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10 w-full">
-        <div className="w-full px-2 sm:px-4">
-          <div className="flex flex-wrap justify-between items-center py-3 sm:py-0 sm:h-16">
+        <div className="max-w-[100%] px-1 sm:px-4 mx-auto">
+          <div className="flex flex-wrap justify-between items-center py-2 sm:py-0 sm:h-16">
             <div className="flex items-center">
               <Link href="/">
-                <div className="flex items-center space-x-2 cursor-pointer">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
+                <div className="flex items-center space-x-1 sm:space-x-2 cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
                     <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
                     <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                     <path d="M12 17.5v-11" />
                   </svg>
-                  <span className="font-semibold text-lg">InvoiceLyticsBot</span>
+                  <span className="font-semibold text-sm sm:text-base">InvoiceLyticsBot</span>
                 </div>
               </Link>
             </div>
-            <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
+            <div className="flex items-center space-x-1 mt-0 sm:mt-0 justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={toggleUpgradeModal}
-                className="text-xs sm:text-sm px-1 sm:px-3"
+                className="text-xs px-1 py-1 h-7 sm:h-8 min-w-0 sm:px-2"
               >
                 Upgrade
               </Button>
               <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
-                <Button size="sm" className="text-xs sm:text-sm px-1 sm:px-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-1 sm:mr-2">
+                <Button size="sm" className="text-xs px-1 py-1 h-7 sm:h-8 min-w-0 sm:px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-1">
                     <path d="m22 2-7 20-4-9-9-4Z" />
                     <path d="M22 2 11 13" />
                   </svg>
-                  <span className="hidden sm:inline">Open in Telegram</span>
-                  <span className="sm:hidden">Telegram</span>
+                  <span className="hidden sm:inline ml-1">Telegram</span>
                 </Button>
               </a>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={handleLogout}
-                className="text-gray-700 text-xs sm:text-sm px-1 sm:px-3"
+                className="text-gray-700 text-xs px-1 py-1 h-7 sm:h-8 min-w-0 sm:px-2"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-1 sm:mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" x2="9" y1="12" y2="12" />
                 </svg>
-                <span className="hidden sm:inline">Logout</span>
-                <span className="sm:hidden">Exit</span>
+                <span className="hidden sm:inline ml-1">Exit</span>
               </Button>
             </div>
           </div>
@@ -398,11 +396,11 @@ export default function Dashboard() {
       </header>
 
       {/* Main content */}
-      <div className="flex-grow bg-gray-50 w-full">
-        <div className="w-full max-w-[1200px] mx-auto px-2 sm:px-4 py-4 sm:py-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 sm:gap-8">
+      <div className="flex-grow bg-gray-50 w-full overflow-x-hidden">
+        <div className="w-full max-w-full sm:max-w-[95%] lg:max-w-[90%] mx-auto px-1 sm:px-2 py-2 sm:py-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             {/* Left sidebar */}
-            <div className="order-2 md:order-1 md:col-span-2 xl:col-span-1">
+            <div className="order-2 md:order-1 md:col-span-1 xl:col-span-1">
               <Card className="mb-6">
                 <CardContent className="pt-6">
                   <UsageMeter onUpgradeClick={toggleUpgradeModal} />
@@ -420,7 +418,7 @@ export default function Dashboard() {
             </div>
 
             {/* Main dashboard */}
-            <div className="order-1 md:order-2 md:col-span-3 xl:col-span-4">
+            <div className="order-1 md:order-2 md:col-span-1 lg:col-span-2">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
                 <div className="w-full sm:w-auto">
                   <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
@@ -497,16 +495,16 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4 w-full">
-        <div className="w-full max-w-[1200px] mx-auto px-2 sm:px-4">
-          <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0">
-            <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
+      <footer className="bg-white border-t border-gray-200 py-2 w-full">
+        <div className="w-full max-w-full sm:max-w-[95%] lg:max-w-[90%] mx-auto px-1 sm:px-2">
+          <div className="flex justify-center items-center">
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
                 <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
                 <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                 <path d="M12 17.5v-11" />
               </svg>
-              <span className="text-xs sm:text-sm">© {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.</span>
+              <span className="text-xs">© {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span></span>
             </div>
           </div>
         </div>

@@ -11,13 +11,15 @@
   
   * {
     @apply border-border;
+    box-sizing: border-box;
   }
 
-  html, body {
+  html {
     overflow-x: hidden;
     position: relative;
-    width: 100%;
-    max-width: 100%;
+    width: 100vw;
+    max-width: 100vw;
+    overflow-y: scroll;
   }
 
   body {
@@ -25,6 +27,11 @@
     color: var(--text-color);
     background-color: var(--background-color);
     overscroll-behavior: none;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding: 0;
+    margin: 0;
   }
   
   h1 {
