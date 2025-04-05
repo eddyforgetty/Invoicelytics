@@ -133,17 +133,17 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Invoice ID</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead className="whitespace-nowrap">Invoice ID</TableHead>
+              <TableHead className="whitespace-nowrap">Client</TableHead>
+              <TableHead className="whitespace-nowrap">Amount</TableHead>
+              <TableHead className="hidden md:table-cell">Description</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <TableHead className="hidden sm:table-cell whitespace-nowrap">Date</TableHead>
+              <TableHead className="w-[100px] whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -156,7 +156,7 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                   key={invoice.invoiceId} 
                   className={isCurrentUserInvoice ? "bg-blue-50" : ""}
                 >
-                  <TableCell className="font-mono">
+                  <TableCell className="font-mono text-xs sm:text-sm whitespace-nowrap">
                     <div className="flex items-center">
                       {isCurrentUserInvoice && (
                         <span 
@@ -164,15 +164,15 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                           title="Your invoice"
                         />
                       )}
-                      {invoice.invoiceId}
+                      {invoice.invoiceId.substring(0, 8)}...
                     </div>
                   </TableCell>
-                  <TableCell>{invoice.clientName}</TableCell>
-                  <TableCell>${invoice.amount.toFixed(2)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={invoice.description}>
+                  <TableCell className="text-xs sm:text-sm whitespace-nowrap">{invoice.clientName}</TableCell>
+                  <TableCell className="text-xs sm:text-sm whitespace-nowrap">${invoice.amount.toFixed(2)}</TableCell>
+                  <TableCell className="hidden md:table-cell max-w-[200px] truncate text-xs sm:text-sm" title={invoice.description}>
                     {invoice.description}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge 
                       variant={invoice.status === "paid" ? "default" : "destructive"}
                       className={
@@ -191,63 +191,69 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                       }
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-500">
+                  <TableCell className="hidden sm:table-cell text-gray-500 text-xs sm:text-sm whitespace-nowrap">
                     {new Date(invoice.createdAt).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
+                  <TableCell className="whitespace-nowrap">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                       {/* Status control buttons - for testing only */}
-                      <div className="flex space-x-1 mr-2">
+                      <div className="flex space-x-1">
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="h-7 px-2 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          className="h-7 w-7 sm:w-auto sm:px-2 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                           disabled={invoice.status === 'paid' || updatingInvoiceId === invoice.invoiceId}
                           onClick={() => updateInvoiceStatus(invoice.invoiceId, 'paid')}
+                          title="Mark as Paid"
                         >
-                          Set Paid
+                          <span className="hidden sm:inline">Set Paid</span>
+                          <span className="sm:hidden">✓</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="h-7 px-2 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                          className="h-7 w-7 sm:w-auto sm:px-2 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
                           disabled={invoice.status === 'canceled' || updatingInvoiceId === invoice.invoiceId}
                           onClick={() => updateInvoiceStatus(invoice.invoiceId, 'canceled')}
+                          title="Cancel Invoice"
                         >
-                          Cancel
+                          <span className="hidden sm:inline">Cancel</span>
+                          <span className="sm:hidden">✕</span>
                         </Button>
                       </div>
                       
-                      {/* Regular actions */}
-                      <Link href={`/invoice/${invoice.invoiceId}`}>
-                        <button className="text-gray-500 hover:text-gray-700" title="View Invoice">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </svg>
-                        </button>
-                      </Link>
-                      
-                      {/* Legacy payment link button */}
-                      {invoice.stripePaymentLink && (
-                        <button 
-                          className="text-gray-500 hover:text-gray-700" 
-                          title="Copy Payment Link"
-                          onClick={() => {
-                            navigator.clipboard.writeText(invoice.stripePaymentLink!);
-                            toast({
-                              title: "Payment Link Copied",
-                              description: "Payment link has been copied to clipboard.",
-                              variant: "default"
-                            });
-                          }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-link">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                          </svg>
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {/* Regular actions */}
+                        <Link href={`/invoice/${invoice.invoiceId}`}>
+                          <button className="text-gray-500 hover:text-gray-700" title="View Invoice">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
+                              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                        </Link>
+                        
+                        {/* Legacy payment link button */}
+                        {invoice.stripePaymentLink && (
+                          <button 
+                            className="text-gray-500 hover:text-gray-700" 
+                            title="Copy Payment Link"
+                            onClick={() => {
+                              navigator.clipboard.writeText(invoice.stripePaymentLink!);
+                              toast({
+                                title: "Payment Link Copied",
+                                description: "Payment link has been copied to clipboard.",
+                                variant: "default"
+                              });
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-link">
+                              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>

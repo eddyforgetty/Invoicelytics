@@ -83,4 +83,14 @@
   input, textarea, select {
     @apply border border-slate-300 bg-white text-slate-900;
   }
+  
+  /* Hide scrollbar but keep scrolling functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 }

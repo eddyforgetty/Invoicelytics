@@ -346,7 +346,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex flex-wrap justify-between items-center py-3 sm:py-0 sm:h-16">
             <div className="flex items-center">
               <Link href="/">
                 <div className="flex items-center space-x-2 cursor-pointer">
@@ -359,35 +359,38 @@ export default function Dashboard() {
                 </div>
               </Link>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 md:space-x-4 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={toggleUpgradeModal}
+                className="text-xs sm:text-sm px-2 sm:px-3"
               >
-                Upgrade Plan
+                Upgrade
               </Button>
               <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
-                <Button size="sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-2">
+                <Button size="sm" className="text-xs sm:text-sm px-2 sm:px-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-1 sm:mr-2">
                     <path d="m22 2-7 20-4-9-9-4Z" />
                     <path d="M22 2 11 13" />
                   </svg>
-                  Open in Telegram
+                  <span className="hidden sm:inline">Open in Telegram</span>
+                  <span className="sm:hidden">Telegram</span>
                 </Button>
               </a>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={handleLogout}
-                className="text-gray-700"
+                className="text-gray-700 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-1 sm:mr-2">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                   <polyline points="16 17 21 12 16 7" />
                   <line x1="21" x2="9" y1="12" y2="12" />
                 </svg>
-                Logout
+                <span className="hidden sm:inline">Logout</span>
+                <span className="sm:hidden">Exit</span>
               </Button>
             </div>
           </div>
@@ -396,10 +399,10 @@ export default function Dashboard() {
 
       {/* Main content */}
       <div className="flex-grow bg-gray-50">
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div className="container mx-auto px-4 py-6 sm:py-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 sm:gap-8">
             {/* Left sidebar */}
-            <div className="md:col-span-2 xl:col-span-1">
+            <div className="order-2 md:order-1 md:col-span-2 xl:col-span-1">
               <Card className="mb-6">
                 <CardContent className="pt-6">
                   <UsageMeter onUpgradeClick={toggleUpgradeModal} />
@@ -417,22 +420,22 @@ export default function Dashboard() {
             </div>
 
             {/* Main dashboard */}
-            <div className="md:col-span-3 xl:col-span-4">
-              <div className="flex justify-between items-center mb-6">
+            <div className="order-1 md:order-2 md:col-span-3 xl:col-span-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold">Dashboard</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
                   {currentUser && (
-                    <p className="text-gray-600 mt-1">
+                    <p className="text-gray-600 mt-1 text-sm sm:text-base">
                       Welcome, <span className="font-medium text-primary-600">{currentUser.username}</span>
-                      <span className="inline-flex items-center ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center ml-2 px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {currentUser.tier ? currentUser.tier.charAt(0).toUpperCase() + currentUser.tier.slice(1) : "Free"} Plan
                       </span>
                     </p>
                   )}
                 </div>
-                <Link href="/invoice/new">
-                  <Button>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-2">
+                <Link href="/invoice/new" className="self-start sm:self-auto">
+                  <Button size="sm" className="whitespace-nowrap h-8 sm:h-9 text-xs sm:text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus mr-1 sm:mr-2">
                       <path d="M5 12h14" />
                       <path d="M12 5v14" />
                     </svg>
@@ -447,11 +450,11 @@ export default function Dashboard() {
                 onValueChange={setActiveTab}
                 className="space-y-4"
               >
-                <TabsList>
-                  <TabsTrigger value="invoices">All Invoices</TabsTrigger>
-                  <TabsTrigger value="pending">Pending</TabsTrigger>
-                  <TabsTrigger value="paid">Paid</TabsTrigger>
-                  <TabsTrigger value="canceled">Canceled</TabsTrigger>
+                <TabsList className="w-full overflow-x-auto flex flex-nowrap no-scrollbar sm:justify-start mb-1 sm:mb-0">
+                  <TabsTrigger value="invoices" className="text-xs sm:text-sm whitespace-nowrap">All Invoices</TabsTrigger>
+                  <TabsTrigger value="pending" className="text-xs sm:text-sm whitespace-nowrap">Pending</TabsTrigger>
+                  <TabsTrigger value="paid" className="text-xs sm:text-sm whitespace-nowrap">Paid</TabsTrigger>
+                  <TabsTrigger value="canceled" className="text-xs sm:text-sm whitespace-nowrap">Canceled</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="invoices" className="space-y-4">
@@ -492,16 +495,16 @@ export default function Dashboard() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-4">
+      <footer className="bg-white border-t border-gray-200 py-3 sm:py-4">
         <div className="container mx-auto px-4">
-          <div className="flex justify-center items-center">
+          <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0">
             <div className="flex items-center space-x-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
                 <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
                 <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                 <path d="M12 17.5v-11" />
               </svg>
-              <span className="text-sm">© {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.</span>
+              <span className="text-xs sm:text-sm">© {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.</span>
             </div>
           </div>
         </div>
