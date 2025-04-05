@@ -132,100 +132,211 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="w-full overflow-x-auto no-scrollbar">
-        <Table className="w-full">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="whitespace-nowrap text-xs sm:text-sm">ID</TableHead>
-              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Client</TableHead>
-              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Amount</TableHead>
-              <TableHead className="hidden md:table-cell text-xs sm:text-sm">Description</TableHead>
-              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Status</TableHead>
-              <TableHead className="hidden sm:table-cell whitespace-nowrap text-xs sm:text-sm">Date</TableHead>
-              <TableHead className="whitespace-nowrap text-xs sm:text-sm">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredInvoices.map((invoice) => {
-              // Check if invoice belongs to current user
-              const isCurrentUserInvoice = user?.id === invoice.userId;
-              
-              return (
-                <TableRow 
-                  key={invoice.invoiceId} 
-                  className={isCurrentUserInvoice ? "bg-blue-50" : ""}
+    <div className="w-[96vw] sm:w-auto max-w-full mx-auto bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Mobile Card Layout */}
+      <div className="block md:hidden">
+        {filteredInvoices.map((invoice) => {
+          // Check if invoice belongs to current user
+          const isCurrentUserInvoice = user?.id === invoice.userId;
+          
+          return (
+            <div 
+              key={invoice.invoiceId}
+              className={`border-b border-gray-100 p-3 ${isCurrentUserInvoice ? "bg-blue-50" : ""}`}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center">
+                  {isCurrentUserInvoice && (
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mr-1" title="Your invoice" />
+                  )}
+                  <span className="font-mono text-xs">{invoice.invoiceId.substring(0, 6)}...</span>
+                </div>
+                <Badge 
+                  variant={invoice.status === "paid" ? "default" : "destructive"}
+                  className={
+                    invoice.status === "paid" 
+                      ? "bg-green-100 text-green-800" 
+                      : invoice.status === "pending" 
+                        ? "bg-amber-100 text-amber-800" 
+                        : "bg-red-100 text-red-800"
+                  }
                 >
-                  <TableCell className="font-mono text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">
-                    <div className="flex items-center">
-                      {isCurrentUserInvoice && (
-                        <span 
-                          className="w-2 h-2 rounded-full bg-blue-500 mr-1 sm:mr-2" 
-                          title="Your invoice"
-                        />
-                      )}
-                      {invoice.invoiceId.substring(0, 6)}...
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4 max-w-[60px] sm:max-w-none truncate">
-                    {invoice.clientName}
-                  </TableCell>
-                  <TableCell className="text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">${invoice.amount.toFixed(2)}</TableCell>
-                  <TableCell className="hidden md:table-cell max-w-[200px] truncate text-xs sm:text-sm p-1 sm:p-4" title={invoice.description}>
-                    {invoice.description}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap p-1 sm:p-4">
-                    <Badge 
-                      variant={invoice.status === "paid" ? "default" : "destructive"}
-                      className={
-                        invoice.status === "paid" 
-                          ? "bg-green-100 text-green-800" 
-                          : invoice.status === "pending" 
-                            ? "bg-amber-100 text-amber-800" 
-                            : "bg-red-100 text-red-800"
-                      }
+                  {invoice.status === "paid" 
+                    ? "Paid" 
+                    : invoice.status === "pending" 
+                      ? "Pending" 
+                      : "Canceled"
+                  }
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-1 mb-2 text-xs">
+                <div>
+                  <div className="text-gray-500">Client:</div>
+                  <div className="font-medium truncate">{invoice.clientName}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Amount:</div>
+                  <div className="font-medium">${invoice.amount.toFixed(2)}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-gray-500">Description:</div>
+                  <div className="truncate">{invoice.description}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Date:</div>
+                  <div>{new Date(invoice.createdAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex space-x-1">
+                  <Link href={`/invoice/${invoice.invoiceId}`}>
+                    <button className="p-1 text-gray-500 hover:text-gray-700 rounded" title="View Invoice">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </Link>
+                  
+                  {invoice.stripePaymentLink && (
+                    <button 
+                      className="p-1 text-gray-500 hover:text-gray-700 rounded" 
+                      title="Copy Payment Link"
+                      onClick={() => {
+                        navigator.clipboard.writeText(invoice.stripePaymentLink!);
+                        toast({
+                          title: "Payment Link Copied",
+                          description: "Payment link has been copied to clipboard.",
+                          variant: "default"
+                        });
+                      }}
                     >
-                      {invoice.status === "paid" 
-                        ? "Paid" 
-                        : invoice.status === "pending" 
-                          ? "Pending" 
-                          : "Canceled"
-                      }
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-gray-500 text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">
-                    {new Date(invoice.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap p-1 sm:p-4">
-                    <div className="flex flex-row flex-wrap items-center gap-1 sm:gap-2">
-                      {/* Status control buttons - for testing only */}
-                      <div className="flex space-x-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-link">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex space-x-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-6 w-6 p-0 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                    disabled={invoice.status === 'paid' || updatingInvoiceId === invoice.invoiceId}
+                    onClick={() => updateInvoiceStatus(invoice.invoiceId, 'paid')}
+                    title="Mark as Paid"
+                  >
+                    <span className="sm:hidden">✓</span>
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-6 w-6 p-0 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                    disabled={invoice.status === 'canceled' || updatingInvoiceId === invoice.invoiceId}
+                    onClick={() => updateInvoiceStatus(invoice.invoiceId, 'canceled')}
+                    title="Cancel Invoice"
+                  >
+                    <span className="sm:hidden">✕</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Desktop Table Layout */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">ID</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Client</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Amount</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Description</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Status</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Date</TableHead>
+                <TableHead className="whitespace-nowrap text-xs sm:text-sm">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredInvoices.map((invoice) => {
+                // Check if invoice belongs to current user
+                const isCurrentUserInvoice = user?.id === invoice.userId;
+                
+                return (
+                  <TableRow 
+                    key={invoice.invoiceId} 
+                    className={isCurrentUserInvoice ? "bg-blue-50" : ""}
+                  >
+                    <TableCell className="font-mono text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">
+                      <div className="flex items-center">
+                        {isCurrentUserInvoice && (
+                          <span 
+                            className="w-2 h-2 rounded-full bg-blue-500 mr-1 sm:mr-2" 
+                            title="Your invoice"
+                          />
+                        )}
+                        {invoice.invoiceId.substring(0, 6)}...
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4 max-w-[60px] sm:max-w-none truncate">
+                      {invoice.clientName}
+                    </TableCell>
+                    <TableCell className="text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">${invoice.amount.toFixed(2)}</TableCell>
+                    <TableCell className="max-w-[200px] truncate text-xs sm:text-sm p-1 sm:p-4" title={invoice.description}>
+                      {invoice.description}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap p-1 sm:p-4">
+                      <Badge 
+                        variant={invoice.status === "paid" ? "default" : "destructive"}
+                        className={
+                          invoice.status === "paid" 
+                            ? "bg-green-100 text-green-800" 
+                            : invoice.status === "pending" 
+                              ? "bg-amber-100 text-amber-800" 
+                              : "bg-red-100 text-red-800"
+                        }
+                      >
+                        {invoice.status === "paid" 
+                          ? "Paid" 
+                          : invoice.status === "pending" 
+                            ? "Pending" 
+                            : "Canceled"
+                        }
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-500 text-xs sm:text-sm whitespace-nowrap p-1 sm:p-4">
+                      {new Date(invoice.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap p-1 sm:p-4">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="h-6 w-6 sm:h-7 sm:w-auto sm:px-2 p-0 sm:p-1 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          className="h-7 sm:w-auto sm:px-2 p-1 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                           disabled={invoice.status === 'paid' || updatingInvoiceId === invoice.invoiceId}
                           onClick={() => updateInvoiceStatus(invoice.invoiceId, 'paid')}
                           title="Mark as Paid"
                         >
-                          <span className="hidden sm:inline">Set Paid</span>
-                          <span className="sm:hidden">✓</span>
+                          <span>Set Paid</span>
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
-                          className="h-6 w-6 sm:h-7 sm:w-auto sm:px-2 p-0 sm:p-1 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                          className="h-7 sm:w-auto sm:px-2 p-1 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
                           disabled={invoice.status === 'canceled' || updatingInvoiceId === invoice.invoiceId}
                           onClick={() => updateInvoiceStatus(invoice.invoiceId, 'canceled')}
                           title="Cancel Invoice"
                         >
-                          <span className="hidden sm:inline">Cancel</span>
-                          <span className="sm:hidden">✕</span>
+                          <span>Cancel</span>
                         </Button>
-                      </div>
-                      
-                      <div className="flex space-x-1 sm:space-x-2">
-                        {/* Regular actions */}
+                        
                         <Link href={`/invoice/${invoice.invoiceId}`}>
                           <button className="p-1 text-gray-500 hover:text-gray-700 rounded" title="View Invoice">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-eye">
@@ -235,7 +346,6 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                           </button>
                         </Link>
                         
-                        {/* Legacy payment link button */}
                         {invoice.stripePaymentLink && (
                           <button 
                             className="p-1 text-gray-500 hover:text-gray-700 rounded" 
@@ -256,13 +366,13 @@ export default function InvoicesList({ invoices, isLoading, filter }: InvoicesLi
                           </button>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

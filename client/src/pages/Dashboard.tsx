@@ -397,8 +397,8 @@ export default function Dashboard() {
 
       {/* Main content */}
       <div className="flex-grow bg-gray-50 w-full overflow-x-hidden">
-        <div className="w-full max-w-full sm:max-w-[95%] lg:max-w-[90%] mx-auto px-1 sm:px-2 py-2 sm:py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="w-[96vw] mx-auto px-1 sm:px-2 py-2 sm:py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {/* Left sidebar */}
             <div className="order-2 md:order-1 md:col-span-1 xl:col-span-1">
               <Card className="mb-6">
@@ -496,7 +496,7 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-2 w-full">
-        <div className="w-full max-w-full sm:max-w-[95%] lg:max-w-[90%] mx-auto px-1 sm:px-2">
+        <div className="w-[96vw] mx-auto px-1 sm:px-2">
           <div className="flex justify-center items-center">
             <div className="flex items-center space-x-1 sm:space-x-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
