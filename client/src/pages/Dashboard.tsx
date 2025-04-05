@@ -346,8 +346,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="container mx-auto px-4">
-          {/* Logo row - always visible */}
-          <div className="flex items-center justify-between h-14 sm:h-16">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Link href="/">
                 <div className="flex items-center space-x-2 cursor-pointer">
@@ -360,78 +359,38 @@ export default function Dashboard() {
                 </div>
               </Link>
             </div>
-            
-            {/* Mobile menu button - only on xs screens */}
-            <div className="block sm:hidden">
+            <div className="flex items-center gap-1 sm:gap-4">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={toggleUpgradeModal}
-                className="py-1 px-2 h-8 text-xs"
+                className="h-8 px-2"
               >
-                Upgrade
+                <span className="text-xs">Upgrade</span>
+              </Button>
+              <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="h-8 px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send sm:mr-2">
+                    <path d="m22 2-7 20-4-9-9-4Z" />
+                    <path d="M22 2 11 13" />
+                  </svg>
+                  <span className="hidden sm:inline text-xs sm:text-sm">Telegram</span>
+                </Button>
+              </a>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout}
+                className="text-gray-700 h-8 px-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out sm:mr-2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" x2="9" y1="12" y2="12" />
+                </svg>
+                <span className="hidden sm:inline text-xs sm:text-sm">Logout</span>
               </Button>
             </div>
-          </div>
-          
-          {/* Desktop navigation row */}
-          <div className="hidden sm:flex sm:items-center sm:space-x-4 sm:py-0 sm:h-0 sm:mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleUpgradeModal}
-              className="text-sm px-3"
-            >
-              Upgrade Plan
-            </Button>
-            <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer">
-              <Button size="sm" className="text-sm px-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-2">
-                  <path d="m22 2-7 20-4-9-9-4Z" />
-                  <path d="M22 2 11 13" />
-                </svg>
-                Open in Telegram
-              </Button>
-            </a>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleLogout}
-              className="text-gray-700 text-sm px-3"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" x2="9" y1="12" y2="12" />
-              </svg>
-              Logout
-            </Button>
-          </div>
-          
-          {/* Mobile navigation row */}
-          <div className="flex sm:hidden justify-between py-2 border-t border-gray-100">
-            <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer" className="flex-1 mx-1">
-              <Button size="sm" variant="outline" className="w-full h-8 text-xs px-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send mr-1">
-                  <path d="m22 2-7 20-4-9-9-4Z" />
-                  <path d="M22 2 11 13" />
-                </svg>
-                Telegram
-              </Button>
-            </a>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleLogout}
-              className="text-gray-700 text-xs h-8 flex-1 mx-1 px-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out mr-1">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" x2="9" y1="12" y2="12" />
-              </svg>
-              Logout
-            </Button>
           </div>
         </div>
       </header>
