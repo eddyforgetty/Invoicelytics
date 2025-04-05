@@ -450,12 +450,12 @@ export default function Dashboard() {
                 onValueChange={setActiveTab}
                 className="space-y-4"
               >
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
-                  <TabsList className="w-max min-w-full flex flex-nowrap mb-2">
-                    <TabsTrigger value="invoices" className="text-xs sm:text-sm whitespace-nowrap flex-1">All Invoices</TabsTrigger>
-                    <TabsTrigger value="pending" className="text-xs sm:text-sm whitespace-nowrap flex-1">Pending</TabsTrigger>
-                    <TabsTrigger value="paid" className="text-xs sm:text-sm whitespace-nowrap flex-1">Paid</TabsTrigger>
-                    <TabsTrigger value="canceled" className="text-xs sm:text-sm whitespace-nowrap flex-1">Canceled</TabsTrigger>
+                <div className="relative">
+                  <TabsList className="flex flex-nowrap mb-2 overflow-x-scroll no-scrollbar">
+                    <TabsTrigger value="invoices" className="text-xs sm:text-sm whitespace-nowrap">All Invoices</TabsTrigger>
+                    <TabsTrigger value="pending" className="text-xs sm:text-sm whitespace-nowrap">Pending</TabsTrigger>
+                    <TabsTrigger value="paid" className="text-xs sm:text-sm whitespace-nowrap">Paid</TabsTrigger>
+                    <TabsTrigger value="canceled" className="text-xs sm:text-sm whitespace-nowrap">Canceled</TabsTrigger>
                   </TabsList>
                 </div>
                 
