@@ -52,17 +52,23 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$0</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button 
-                size="sm" 
-                variant="outline"
+              <a 
+                href="https://buy.stripe.com/14kg135UDeK05iweUW" 
+                target="_blank" 
+                rel="noopener noreferrer"
                 className="w-full"
-                onClick={() => {
-                  window.open('https://buy.stripe.com/14kg135UDeK05iweUW', '_blank');
-                  onClose();
-                }}
               >
-                Free Tier
-              </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    onClose();
+                  }}
+                >
+                  Free Tier
+                </Button>
+              </a>
             </div>
           </div>
           
@@ -107,16 +113,22 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$5</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button 
-                size="sm"
+              <a 
+                href="https://buy.stripe.com/cN23eh5UD0Tah1e7st" 
+                target="_blank" 
+                rel="noopener noreferrer"
                 className="w-full"
-                onClick={() => {
-                  window.open('https://buy.stripe.com/cN23eh5UD0Tah1e7st', '_blank');
-                  onClose();
-                }}
               >
-                Upgrade to Basic
-              </Button>
+                <Button 
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    onClose();
+                  }}
+                >
+                  Upgrade to Basic
+                </Button>
+              </a>
             </div>
           </div>
           
@@ -161,17 +173,23 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$15</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button 
-                size="sm"
-                variant="secondary"
+              <a 
+                href="https://buy.stripe.com/aEU1692IrdFWdP25kk" 
+                target="_blank" 
+                rel="noopener noreferrer"
                 className="w-full"
-                onClick={() => {
-                  window.open('https://buy.stripe.com/aEU1692IrdFWdP25kk', '_blank');
-                  onClose();
-                }}
               >
-                Upgrade to Pro
-              </Button>
+                <Button 
+                  size="sm"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => {
+                    onClose();
+                  }}
+                >
+                  Upgrade to Pro
+                </Button>
+              </a>
             </div>
           </div>
         </div>
