@@ -342,7 +342,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen max-w-[100vw] overflow-hidden">
+    <div className="flex flex-col min-h-screen min-w-[1060px]">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10 w-full">
         <div className="max-w-[100%] px-1 sm:px-4 mx-auto">
