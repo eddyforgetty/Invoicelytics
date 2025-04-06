@@ -801,9 +801,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       user = await storage.updateStripeCustomerId(user.id, customer.id);
       
-      // For demo purposes, we'll use a fixed price ID
+      // Use the Pro tier price ID from our Stripe account
       // In production, this would be stored in environment variables
-      const priceId = "price_1OudFPQiDTPYTfNOv4e3q6A5"; 
+      const priceId = "price_1OudFPQiDTPYTfNOv4e3q6A5"; // This should match the Pro tier price in Stripe
 
       // Ensure user is defined before proceeding
       if (!user) {
