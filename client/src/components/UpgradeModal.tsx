@@ -1,6 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
+import { useState } from "react";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -8,6 +10,23 @@ interface UpgradeModalProps {
 }
 
 export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
+  const [, setLocation] = useLocation();
+  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({
+    free: false,
+    basic: false,
+    pro: false
+  });
+
+  const handleSubscribe = (plan: string) => {
+    setIsLoading(prev => ({ ...prev, [plan]: true }));
+    
+    // Close the modal first
+    onClose();
+    
+    // Navigate to subscription page with plan type
+    setLocation(`/subscribe?plan=${plan}`);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -44,15 +63,19 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$0</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <a 
-                href="https://buy.stripe.com/live_14kg135UDeK05iweUW" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
-                onClick={() => onClose()}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => handleSubscribe('free')}
+                disabled={isLoading.free}
               >
-                Free Tier
-              </a>
+                {isLoading.free ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : "Free Tier"}
+              </Button>
             </div>
           </div>
           
@@ -85,15 +108,19 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$5</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <a 
-                href="https://buy.stripe.com/live_cN23eh5UD0Tah1e7st" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
-                onClick={() => onClose()}
+              <Button
+                variant="default"
+                className="w-full"
+                onClick={() => handleSubscribe('basic')}
+                disabled={isLoading.basic}
               >
-                Upgrade to Basic
-              </a>
+                {isLoading.basic ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : "Upgrade to Basic"}
+              </Button>
             </div>
           </div>
           
@@ -126,15 +153,19 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$15</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <a 
-                href="https://buy.stripe.com/live_aEU1692IrdFWdP25kk" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2"
-                onClick={() => onClose()}
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => handleSubscribe('pro')}
+                disabled={isLoading.pro}
               >
-                Upgrade to Pro
-              </a>
+                {isLoading.pro ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : "Upgrade to Pro"}
+              </Button>
             </div>
           </div>
         </div>

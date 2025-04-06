@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from 'wouter';
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
@@ -13,11 +14,26 @@ if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
 }
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-const SubscribeForm = () => {
+// Helper function to get price for a plan
+const getPlanDetails = (plan?: string) => {
+  switch (plan) {
+    case 'basic':
+      return { name: 'Basic Plan', price: 5, description: 'Up to 10 invoices per month with premium PDF templates' };
+    case 'pro':
+      return { name: 'Pro Plan', price: 15, description: 'Unlimited invoices with advanced features and priority support' };
+    case 'free':
+    default:
+      return { name: 'Free Plan', price: 0, description: 'Up to 3 invoices per month with basic features' };
+  }
+};
+
+const SubscribeForm = ({ planType }: { planType: string }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [, setLocation] = useLocation();
+  const planDetails = getPlanDetails(planType);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +48,7 @@ const SubscribeForm = () => {
       const { error } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: window.location.origin + "/dashboard",
+          return_url: window.location.origin + "/dashboard?subscription=success",
         },
       });
 
@@ -47,6 +63,7 @@ const SubscribeForm = () => {
           title: "Payment Successful",
           description: "You are subscribed!",
         });
+        setLocation('/dashboard');
       }
     } finally {
       setIsLoading(false);
@@ -56,6 +73,13 @@ const SubscribeForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
+        <div className="bg-muted p-3 rounded-md mb-4">
+          <div className="flex justify-between items-center">
+            <span className="font-medium">{planDetails.name}</span>
+            <span className="font-semibold">${planDetails.price}/month</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{planDetails.description}</p>
+        </div>
         <PaymentElement />
       </div>
       <Button 
@@ -63,7 +87,7 @@ const SubscribeForm = () => {
         disabled={!stripe || isLoading} 
         className="w-full"
       >
-        {isLoading ? "Processing..." : "Subscribe Now"}
+        {isLoading ? "Processing..." : `Subscribe to ${planDetails.name}`}
       </Button>
     </form>
   );
@@ -73,6 +97,11 @@ export default function Subscribe() {
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
+
+  // Extract plan type from URL parameters
+  const searchParams = new URLSearchParams(location.split('?')[1] || '');
+  const planType = searchParams.get('plan') || 'pro';
 
   useEffect(() => {
     // In a real app, you would use the actual user ID from auth context
@@ -80,7 +109,10 @@ export default function Subscribe() {
 
     setLoading(true);
     // Create subscription as soon as the page loads
-    apiRequest("POST", "/api/get-or-create-subscription", { userId })
+    apiRequest("POST", "/api/get-or-create-subscription", { 
+      userId,
+      planType
+    })
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to create subscription");
@@ -100,7 +132,9 @@ export default function Subscribe() {
       .finally(() => {
         setLoading(false);
       });
-  }, [toast]);
+  }, [toast, planType]);
+
+  const planDetails = getPlanDetails(planType);
 
   if (loading) {
     return (
@@ -179,9 +213,12 @@ export default function Subscribe() {
                 We couldn't set up your subscription. Please try again later.
               </CardDescription>
             </CardHeader>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-2">
               <Button onClick={() => window.location.reload()} className="w-full">
                 Try Again
+              </Button>
+              <Button variant="outline" onClick={() => setLocation('/dashboard')} className="w-full">
+                Return to Dashboard
               </Button>
             </CardFooter>
           </Card>
@@ -231,14 +268,14 @@ export default function Subscribe() {
       <div className="flex-grow flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold">Subscribe to Premium</CardTitle>
+            <CardTitle className="text-2xl font-bold">Subscribe to {planDetails.name}</CardTitle>
             <CardDescription>
-              Unlock unlimited invoices and premium features for just $15/month.
+              {planDetails.description} for just ${planDetails.price}/month.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-              <SubscribeForm />
+              <SubscribeForm planType={planType} />
             </Elements>
           </CardContent>
         </Card>
