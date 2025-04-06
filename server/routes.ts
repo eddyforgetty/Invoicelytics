@@ -399,54 +399,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
 
     if (!stripe) {
       console.error("Webhook: Stripe is not configured");
       return res.status(400).send("Webhook Error: Stripe is not configured");
     }
 
-    if (!webhookSecret) {
-      console.warn("Webhook: Missing webhook secret, falling back to manual verification");
-      // Fallback to manual verification if webhook secret is not available
-      let event;
-      
-      try {
-        // Parse the request body
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
-        } else {
-          event = req.body;
-        }
-        
-        console.log("Webhook received without signature verification:", event.type);
-      } catch (err) {
-        console.error("Webhook: Error parsing request body:", err);
-        return res.status(400).send("Webhook Error: Invalid payload");
-      }
-    }
-
-    let event;
-
     try {
-      // Verify webhook signature if secret is available
+      // Verify webhook signature if secret and signature are available
       if (webhookSecret && sig) {
         try {
           event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-          console.log("Webhook signature verified:", event.type);
-        } catch (err) {
+          console.log("Webhook signature verified successfully:", event.type);
+        } catch (err: any) {
           console.error(`Webhook signature verification failed: ${err.message}`);
           return res.status(400).send(`Webhook Error: ${err.message}`);
         }
       } else {
         // Fallback to manual parsing if no signature or secret
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
-        } else {
-          event = req.body;
+        console.warn("Webhook: Processing without signature verification");
+        
+        try {
+          // Parse the request body
+          if (Buffer.isBuffer(req.body)) {
+            const rawBody = req.body.toString('utf8');
+            event = JSON.parse(rawBody);
+          } else {
+            event = req.body;
+          }
+          console.log("Webhook parsed manually:", event?.type || "unknown type");
+        } catch (err: any) {
+          console.error("Webhook: Error parsing request body:", err);
+          return res.status(400).send("Webhook Error: Invalid payload");
         }
-        console.log("Webhook processed without signature verification:", event.type);
       }
       
       // Validate the event structure
@@ -553,7 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return a success response
       return res.status(200).send('Webhook received successfully');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Webhook: Unexpected error:", error);
       // Return 400 for webhook processing errors
       return res.status(400).send('Webhook Error: An error occurred during processing');
@@ -581,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Webhook: Invoice ${invoiceId} successfully updated to ${status}`);
       return updatedInvoice;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Webhook: Error updating invoice ${invoiceId}:`, error);
     }
   }
