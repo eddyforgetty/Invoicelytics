@@ -395,10 +395,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Function to update invoice status (used by webhook)
+  async function updateInvoiceStatus(invoiceId: string, status: string) {
+    try {
+      console.log(`Attempting to update invoice ${invoiceId} status to ${status}`);
+      
+      // Check if invoice exists first
+      const existingInvoice = await storage.getInvoiceById(invoiceId);
+      if (!existingInvoice) {
+        console.error(`Invoice ${invoiceId} not found during status update to ${status}`);
+        return null;
+      }
+      
+      // Update invoice status
+      const invoice = await storage.updateInvoiceStatus(invoiceId, status);
+      if (!invoice) {
+        console.error(`Failed to update invoice ${invoiceId} status to ${status}`);
+        return null;
+      }
+      
+      console.log(`Successfully updated invoice ${invoiceId} status to ${status}`);
+      return invoice;
+    } catch (error) {
+      console.error(`Error updating invoice ${invoiceId} status:`, error);
+      return null;
+    }
+  }
+
   // Stripe webhook for payment notifications
   app.post('/api/webhook', express.raw({type: 'application/json'}), async (req, res) => {
     const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET; // Get this from environment variables
 
     if (!stripe) {
       console.error("Webhook: Stripe is not configured");
@@ -406,434 +433,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     if (!webhookSecret) {
-      console.warn("Webhook: Missing webhook secret, falling back to manual verification");
-      // Fallback to manual verification if webhook secret is not available
-      let event;
-      
-      try {
-        // Parse the request body
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
-        } else {
-          event = req.body;
-        }
-        
-        console.log("Webhook received without signature verification:", event.type);
-      } catch (err) {
-        console.error("Webhook: Error parsing request body:", err);
-        return res.status(400).send("Webhook Error: Invalid payload");
-      }
+      console.error("Webhook: Missing webhook secret");
+      return res.status(400).send("Webhook Error: Missing webhook secret");
     }
 
     let event;
 
+    // Verify the webhook signature
     try {
-      // Verify webhook signature if secret is available
-      if (webhookSecret && sig) {
-        try {
-          event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-          console.log("Webhook signature verified:", event.type);
-        } catch (err) {
-          console.error(`Webhook signature verification failed: ${err.message}`);
-          return res.status(400).send(`Webhook Error: ${err.message}`);
-        }
-      } else {
-        // Fallback to manual parsing if no signature or secret
-        if (Buffer.isBuffer(req.body)) {
-          const rawBody = req.body.toString('utf8');
-          event = JSON.parse(rawBody);
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+      console.error(`Webhook Error: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        console.log('Payment succeeded:', paymentIntent.id);
+        
+        // Look for invoice ID in metadata
+        const invoiceId = paymentIntent.metadata?.invoiceId;
+        
+        if (invoiceId) {
+          console.log(`Found invoice ID ${invoiceId} in payment intent metadata`);
+          
+          // Find and update the invoice
+          const invoice = await storage.getInvoiceById(invoiceId);
+          if (invoice) {
+            console.log(`Invoice ${invoiceId} found, updating status to paid`);
+            await updateInvoiceStatus(invoiceId, 'paid');
+          } else {
+            console.error(`Invoice ${invoiceId} from payment intent metadata not found in database`);
+          }
         } else {
-          event = req.body;
+          // If no specific invoice ID found, log we can't process it
+          console.error("No invoice ID found in payment intent metadata");
         }
-        console.log("Webhook processed without signature verification:", event.type);
-      }
-      
-      // Validate the event structure
-      if (!event || !event.type || !event.data || !event.data.object) {
-        console.error('Webhook: Invalid event structure received');
-        return res.status(400).send('Webhook Error: Invalid event structure');
-      }
-      
-      console.log("Webhook processing event:", event.type, "ID:", event.id || 'unknown');
-      
-      // Handle different event types
-      switch (event.type) {
-        case 'checkout.session.completed':
-          const session = event.data.object;
-          console.log("Webhook: Checkout session completed:", session.id);
+        break;
+        
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        console.log("Checkout session completed:", session.id);
+        
+        // Check if there's metadata with invoiceId
+        const sessionInvoiceId = session.metadata?.invoiceId;
+        
+        if (sessionInvoiceId) {
+          console.log(`Found invoice ID ${sessionInvoiceId} in session metadata`);
           
-          // Check if there's metadata with invoiceId
-          let sessionInvoiceId = session.metadata?.invoiceId;
-          
-          // If no metadata, try extracting from success URL as fallback
-          if (!sessionInvoiceId && session.success_url) {
-            const successUrl = session.success_url;
-            console.log("Webhook: Checking success URL for invoice ID:", successUrl);
-            
-            // Try to extract invoice ID from URL
-            let match = successUrl.match(/invoice-paid\?id=([^&]+)/);
-            if (match && match[1]) {
-              sessionInvoiceId = match[1];
-            } else if (successUrl.includes('id=')) {
-              match = successUrl.match(/id=([^&]+)/);
-              if (match && match[1]) {
-                sessionInvoiceId = match[1];
+          // Find and update the invoice
+          const invoice = await storage.getInvoiceById(sessionInvoiceId);
+          if (invoice) {
+            console.log(`Invoice ${sessionInvoiceId} found, updating status to paid`);
+            await updateInvoiceStatus(sessionInvoiceId, 'paid');
+          } else {
+            console.error(`Invoice ${sessionInvoiceId} not found in database`);
+          }
+        } else {
+          console.error("Could not extract invoice ID from session metadata");
+        }
+        break;
+        
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    res.status(200).send('Received');
+  });
+
+  // Testing endpoint for manual webhook triggering
+  if (process.env.NODE_ENV !== 'production') {
+    app.post('/api/test-webhook', async (req, res) => {
+      try {
+        const { type, invoiceId } = req.body;
+        
+        if (!type || !invoiceId) {
+          return res.status(400).json({ error: "Missing type or invoiceId" });
+        }
+        
+        // Build a mock webhook payload based on the event type
+        let mockPayload: any = {
+          id: `evt_test_${Date.now()}`,
+          type,
+          data: {
+            object: {
+              id: `pi_test_${Date.now()}`,
+              metadata: {
+                invoiceId
               }
             }
           }
-          
-          if (sessionInvoiceId) {
-            console.log(`Webhook: Found invoice ID ${sessionInvoiceId} from session`);
-            
-            // Update the invoice status
-            const invoice = await storage.getInvoiceById(sessionInvoiceId);
-            if (invoice) {
-              console.log(`Webhook: Invoice ${sessionInvoiceId} found, updating status to paid`);
-              await updateInvoiceStatus(sessionInvoiceId, 'paid');
-            } else {
-              console.error(`Webhook: Invoice ${sessionInvoiceId} not found in database`);
-            }
-          } else {
-            console.error("Webhook: Could not extract invoice ID from session");
-          }
-          break;
+        };
         
-        case 'payment_intent.succeeded':
-          const paymentIntent = event.data.object;
-          console.log("Webhook: Payment intent succeeded:", paymentIntent.id);
-          
-          // Get invoice ID from metadata
-          const paymentInvoiceId = paymentIntent.metadata?.invoiceId;
-          
-          if (paymentInvoiceId) {
-            console.log(`Webhook: Found invoice ID ${paymentInvoiceId} in payment intent metadata`);
-            
-            // Update the invoice status
-            const invoice = await storage.getInvoiceById(paymentInvoiceId);
-            if (invoice) {
-              if (invoice.status === 'paid') {
-                console.log(`Webhook: Invoice ${paymentInvoiceId} already paid, skipping update`);
-              } else {
-                console.log(`Webhook: Invoice ${paymentInvoiceId} found, updating status to paid`);
-                await updateInvoiceStatus(paymentInvoiceId, 'paid');
-              }
-            } else {
-              console.error(`Webhook: Invoice ${paymentInvoiceId} not found in database`);
-            }
-          } else {
-            console.log("Webhook: No invoice ID found in payment intent metadata");
-          }
-          break;
-        
-        case 'invoice.payment_succeeded':
-          const stripeInvoice = event.data.object;
-          console.log("Webhook: Invoice payment succeeded:", stripeInvoice.id);
-          
-          // Handle subscription-related invoice payments
-          if (stripeInvoice.subscription) {
-            const subscriptionId = stripeInvoice.subscription;
-            console.log(`Webhook: Subscription ${subscriptionId} payment succeeded`);
-            
-            // Update user subscription status if needed
-            const customerEmail = stripeInvoice.customer_email;
-            const customerId = stripeInvoice.customer;
-            
-            if (customerEmail || customerId) {
-              console.log(`Webhook: Subscription paid for customer ${customerEmail || customerId}`);
-              // Update user subscription status based on email or customer ID if needed
-            }
-          }
-          break;
-        
-        default:
-          console.log(`Webhook: Unhandled event type: ${event.type}`);
-      }
-      
-      // Return a success response
-      return res.status(200).send('Webhook received successfully');
-      
-    } catch (error) {
-      console.error("Webhook: Unexpected error:", error);
-      // Return 400 for webhook processing errors
-      return res.status(400).send('Webhook Error: An error occurred during processing');
-    }
-  });
-  
-  // Utility function to update invoice status from webhook events
-  async function updateInvoiceStatus(invoiceId: string, status: string) {
-    console.log(`Webhook: Updating invoice ${invoiceId} to ${status}`);
-    
-    try {
-      // First check if invoice exists
-      const existingInvoice = await storage.getInvoiceById(invoiceId);
-      if (!existingInvoice) {
-        console.error(`Webhook: Invoice not found for ID: ${invoiceId}`);
-        return;
-      }
-      
-      // Update invoice status
-      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
-      if (!updatedInvoice) {
-        console.error(`Webhook: Failed to update invoice ${invoiceId}`);
-        return;
-      }
-      
-      console.log(`Webhook: Invoice ${invoiceId} successfully updated to ${status}`);
-      return updatedInvoice;
-    } catch (error) {
-      console.error(`Webhook: Error updating invoice ${invoiceId}:`, error);
-    }
-  }
-
-  // Create Payment Intent API endpoint with 3D Secure support
-  app.post("/api/create-payment-intent", async (req, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe is not configured" });
-    }
-
-    try {
-      const { amount, invoiceId } = req.body;
-      
-      // Create a PaymentIntent with 3D Secure authentication support
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount * 100), // Convert to cents
-        currency: "usd",
-        automatic_payment_methods: {
-          enabled: true,
-        },
-        payment_method_options: {
-          card: {
-            request_three_d_secure: 'any' // This ensures 3D Secure will be requested if available
-          }
-        },
-        metadata: {
-          invoiceId: invoiceId || '' // Store invoice ID in metadata for webhook processing
+        // Add session-specific fields for checkout.session.completed events
+        if (type === 'checkout.session.completed') {
+          mockPayload.data.object.success_url = `http://localhost:5000/invoice-paid?id=${invoiceId}`;
         }
-      });
-      
-      console.log(`Payment intent created: ${paymentIntent.id} for amount ${amount} with 3D Secure enabled`);
-      
-      res.json({ 
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id 
-      });
-    } catch (error: any) {
-      console.error("Error creating payment intent:", error);
-      res
-        .status(500)
-        .json({ message: "Error creating payment intent: " + error.message });
-    }
-  });
-
-  // Manual status update endpoint (for testing)
-  app.post('/api/force-update-invoice-status', express.json(), async (req, res) => {
-    const { invoiceId, status } = req.body;
-    
-    if (!invoiceId || !status) {
-      return res.status(400).json({ message: "Invoice ID and status are required" });
-    }
-    
-    try {
-      // Verify the invoice exists
-      const existingInvoice = await storage.getInvoiceById(invoiceId);
-      if (!existingInvoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      
-      // Update invoice status
-      const updatedInvoice = await storage.updateInvoiceStatus(invoiceId, status);
-      
-      if (!updatedInvoice) {
-        return res.status(500).json({ message: "Failed to update invoice status" });
-      }
-      
-      console.log(`Manual status update: Invoice ${invoiceId} set to ${status}`);
-      
-      return res.json({ 
-        success: true,
-        message: `Invoice status updated to ${status}`,
-        invoice: updatedInvoice
-      });
-    } catch (error: any) {
-      console.error("Error updating invoice status:", error);
-      return res.status(500).json({ 
-        message: "Error updating invoice status", 
-        error: error.message 
-      });
-    }
-  });
-
-  // Test webhook endpoint (only for development)
-  app.post('/api/test-webhook', express.json(), async (req, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe is not configured" });
-    }
-    
-    console.log("Test webhook received:", req.body);
-    
-    const { type, invoiceId } = req.body;
-    
-    // Create a mock event payload
-    let mockEvent: any = {
-      id: `evt_test_${Date.now()}`,
-      type: type || 'payment_intent.succeeded',
-      data: {
-        object: {
-          id: `pi_test_${Date.now()}`,
-          metadata: {
-            invoiceId: invoiceId || ''
-          }
+        
+        console.log(`Sending test webhook of type ${type} for invoice ${invoiceId}`);
+        
+        // Send the mock webhook to our own webhook endpoint
+        const options = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(mockPayload)
+        };
+        
+        const response = await fetch(`http://localhost:5000/api/webhook`, options);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          return res.status(500).json({ 
+            error: `Webhook test failed with status ${response.status}`,
+            details: errorText
+          });
         }
-      }
-    };
-    
-    // Make a POST request to our own webhook endpoint
-    try {
-      // Convert the mock event to a buffer (raw JSON)
-      const rawBody = Buffer.from(JSON.stringify(mockEvent));
-      
-      // Create options for the request to our webhook endpoint
-      const options = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': rawBody.length.toString(),
-          'User-Agent': 'Stripe/v1 MockWebhooks/0.0.1'
-        },
-        body: rawBody
-      };
-      
-      // Use fetch to call our own webhook endpoint
-      const response = await fetch(`http://localhost:5000/api/webhook`, options);
-      
-      // Check the response
-      if (response.ok) {
+        
         return res.json({ 
           success: true, 
-          message: "Test webhook sent and processed", 
-          event: mockEvent 
+          message: `Test webhook of type ${type} sent successfully for invoice ${invoiceId}`
         });
-      } else {
-        return res.status(500).json({ 
-          success: false, 
-          message: "Test webhook was not processed correctly" 
-        });
+      } catch (error) {
+        console.error("Error sending test webhook:", error);
+        return res.status(500).json({ error: "Failed to send test webhook" });
       }
-    } catch (error: any) {
-      console.error("Error sending test webhook:", error);
-      return res.status(500).json({ 
-        success: false, 
-        message: "Error sending test webhook",
-        error: error.message 
-      });
-    }
-  });
-  
-  // Create or get subscription API endpoint
-  app.post('/api/get-or-create-subscription', async (req, res) => {
-    if (!stripe) {
-      return res.status(500).json({ message: "Stripe is not configured" });
-    }
-
-    if (!req.body.userId) {
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
-    const userId = req.body.userId;
-    let user = await storage.getUser(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // If user already has a subscription, retrieve it
-    if (user.stripeSubscriptionId) {
-      try {
-        const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId, {
-          expand: ['latest_invoice.payment_intent']
-        });
-
-        // Access the payment intent through the expanded latest_invoice
-        const expandedInvoice = typeof subscription.latest_invoice === 'object' ? 
-          subscription.latest_invoice as unknown as ExpandedInvoice : null;
-          
-        const clientSecret = expandedInvoice?.payment_intent?.client_secret || null;
-
-        res.send({
-          subscriptionId: subscription.id,
-          clientSecret: clientSecret,
-        });
-        return;
-      } catch (error: any) {
-        console.error("Error retrieving subscription:", error);
-        // Continue to create a new subscription if retrieval fails
-      }
-    }
-    
-    // Create a new customer and subscription
-    try {
-      // Default to 'testuser@example.com' for demo purposes
-      const email = user.telegramUsername ? `${user.telegramUsername}@example.com` : 'testuser@example.com';
-      
-      const customer = await stripe.customers.create({
-        email: email,
-        name: user.username,
-      });
-
-      user = await storage.updateStripeCustomerId(user.id, customer.id);
-      
-      // Use the Pro tier price ID from our Stripe account
-      // In production, this would be stored in environment variables
-      const priceId = "price_1OudFPQiDTPYTfNOv4e3q6A5"; // This should match the Pro tier price in Stripe
-
-      // Ensure user is defined before proceeding
-      if (!user) {
-        return res.status(500).json({ message: "User data was lost during processing" });
-      }
-
-      // Create subscription with improved payment settings for 3D Secure
-      const subscription = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{
-          price: priceId, 
-        }],
-        payment_behavior: 'default_incomplete',
-        payment_settings: {
-          payment_method_types: ['card'],
-          save_default_payment_method: 'on_subscription',
-          payment_method_options: {
-            card: {
-              request_three_d_secure: 'any'  // Ensure 3D Secure is used when available
-            }
-          }
-        },
-        expand: ['latest_invoice.payment_intent'],
-      });
-
-      await storage.updateUserStripeInfo(user.id, {
-        stripeCustomerId: customer.id, 
-        stripeSubscriptionId: subscription.id
-      });
-
-      // Also update user tier based on the subscription
-      await storage.updateUserTier(user.id, 'premium');
-      
-      // Access the payment intent through the expanded latest_invoice
-      const expandedInvoice = typeof subscription.latest_invoice === 'object' ? 
-        subscription.latest_invoice as unknown as ExpandedInvoice : null;
-        
-      const clientSecret = expandedInvoice?.payment_intent?.client_secret || null;
-  
-      res.send({
-        subscriptionId: subscription.id,
-        clientSecret: clientSecret,
-      });
-    } catch (error: any) {
-      return res.status(400).send({ error: { message: error.message } });
-    }
-  });
+    });
+  }
 
   const httpServer = createServer(app);
+
   return httpServer;
 }
