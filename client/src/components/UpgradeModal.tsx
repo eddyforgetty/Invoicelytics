@@ -45,7 +45,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
               <a 
-                href="https://buy.stripe.com/14kg135UDeK05iweUW" 
+                href="https://buy.stripe.com/live_14kg135UDeK05iweUW" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2"
@@ -86,7 +86,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
               <a 
-                href="https://buy.stripe.com/cN23eh5UD0Tah1e7st" 
+                href="https://buy.stripe.com/live_cN23eh5UD0Tah1e7st" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
@@ -127,7 +127,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
               <a 
-                href="https://buy.stripe.com/aEU1692IrdFWdP25kk" 
+                href="https://buy.stripe.com/live_aEU1692IrdFWdP25kk" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80 h-9 px-4 py-2"
