@@ -1,8 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Loader2 } from "lucide-react";
-import { useLocation } from "wouter";
-import { useState } from "react";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -10,23 +7,6 @@ interface UpgradeModalProps {
 }
 
 export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
-  const [, setLocation] = useLocation();
-  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({
-    free: false,
-    basic: false,
-    pro: false
-  });
-
-  const handleSubscribe = (plan: string) => {
-    setIsLoading(prev => ({ ...prev, [plan]: true }));
-    
-    // Close the modal first
-    onClose();
-    
-    // Navigate to subscription page with plan type
-    setLocation(`/subscribe?plan=${plan}`);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -46,15 +26,24 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             </div>
             <ul className="text-sm text-gray-600 space-y-2 mb-3 min-h-[8rem]">
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>3 invoices per month</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Basic PDF templates</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Stripe payment links</span>
               </li>
             </ul>
@@ -63,18 +52,16 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$0</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button
+              <Button 
+                size="sm" 
                 variant="outline"
                 className="w-full"
-                onClick={() => handleSubscribe('free')}
-                disabled={isLoading.free}
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_5kAeXG6FN4D07TieV0', '_blank');
+                  onClose();
+                }}
               >
-                {isLoading.free ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : "Free Tier"}
+                Free Tier
               </Button>
             </div>
           </div>
@@ -87,19 +74,31 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             </div>
             <ul className="text-sm text-gray-600 space-y-2 mb-3 min-h-[8rem]">
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>10 invoices per month</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Premium PDF templates</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Stripe payment links</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Invoice reminders</span>
               </li>
             </ul>
@@ -108,18 +107,15 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$5</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button
-                variant="default"
+              <Button 
+                size="sm"
                 className="w-full"
-                onClick={() => handleSubscribe('basic')}
-                disabled={isLoading.basic}
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_aEUdTCe8f1qO8Xm28f', '_blank');
+                  onClose();
+                }}
               >
-                {isLoading.basic ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : "Upgrade to Basic"}
+                Upgrade to Basic
               </Button>
             </div>
           </div>
@@ -132,19 +128,31 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
             </div>
             <ul className="text-sm text-gray-600 space-y-2 mb-3 min-h-[8rem]">
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Unlimited invoices</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Custom branding</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Advanced analytics</span>
               </li>
               <li className="flex items-center">
-                <CheckCircle className="text-green-500 mr-2 flex-shrink-0 h-4 w-4" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check-circle text-green-500 mr-2 flex-shrink-0">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
                 <span>Priority support</span>
               </li>
             </ul>
@@ -153,18 +161,16 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 <span className="text-gray-800 font-medium">$15</span>
                 <span className="text-gray-500 text-sm">/month</span>
               </div>
-              <Button
+              <Button 
+                size="sm"
                 variant="secondary"
                 className="w-full"
-                onClick={() => handleSubscribe('pro')}
-                disabled={isLoading.pro}
+                onClick={() => {
+                  window.open('https://buy.stripe.com/test_7sIeXG8NV7Pc3D2dQY', '_blank');
+                  onClose();
+                }}
               >
-                {isLoading.pro ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : "Upgrade to Pro"}
+                Upgrade to Pro
               </Button>
             </div>
           </div>
