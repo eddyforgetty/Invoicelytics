@@ -402,22 +402,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.sendStatus(200); // Return 200 even for config errors
       }
   
-      // Get the event data from the raw request body
+      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const signature = req.headers['stripe-signature'];
+  
       let event;
       try {
-        // Handle both Buffer and already parsed objects (for testing)
-        if (Buffer.isBuffer(req.body)) {
+        if (webhookSecret && signature && Buffer.isBuffer(req.body)) {
+          // If we have a webhook secret and signature, verify the webhook
+          event = stripe.webhooks.constructEvent(
+            req.body,
+            signature,
+            webhookSecret
+          );
+          console.log("Webhook signature verified successfully");
+        } else if (Buffer.isBuffer(req.body)) {
+          // Fallback if no webhook secret: parse the raw body (less secure)
+          console.warn("Webhook secret or signature missing - processing without verification");
           const rawBody = req.body.toString('utf8');
           event = JSON.parse(rawBody);
-          console.log("Webhook received raw payload and parsed successfully");
+          console.log("Webhook received raw payload and parsed without verification");
         } else {
           // Already parsed (mainly for tests or direct API calls)
           event = req.body;
           console.log("Webhook received pre-parsed payload");
         }
       } catch (err) {
-        console.error("Webhook: Error parsing request body:", err);
-        return res.sendStatus(200); // Still return 200 for parsing errors
+        console.error("Webhook: Error verifying/parsing request:", err);
+        return res.sendStatus(400); // Return 400 for verification errors
       }
       
       // Enhanced validation: check for required fields in the event
