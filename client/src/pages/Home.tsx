@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { config } from "@/config";
 
 export default function Home() {
   return (
@@ -159,7 +160,7 @@ export default function Home() {
                     Stripe payment links
                   </li>
                 </ul>
-                <a href="https://buy.stripe.com/14kg135UDeK05iweUW" target="_blank" rel="noopener noreferrer">
+                <a href={config.stripeCheckoutLinks.free} target="_blank" rel="noopener noreferrer">
                   <Button className="w-full btn-primary">Get Started Free</Button>
                 </a>
               </CardContent>
@@ -204,7 +205,7 @@ export default function Home() {
                     Invoice reminders
                   </li>
                 </ul>
-                <a href="https://buy.stripe.com/cN23eh5UD0Tah1e7st" target="_blank" rel="noopener noreferrer">
+                <a href={config.stripeCheckoutLinks.basic} target="_blank" rel="noopener noreferrer">
                   <Button className="w-full bg-primary text-white hover:bg-primary/90">Upgrade Now</Button>
                 </a>
               </CardContent>
@@ -246,7 +247,7 @@ export default function Home() {
                     Priority support
                   </li>
                 </ul>
-                <a href="https://buy.stripe.com/aEU1692IrdFWdP25kk" target="_blank" rel="noopener noreferrer">
+                <a href={config.stripeCheckoutLinks.pro} target="_blank" rel="noopener noreferrer">
                   <Button className="w-full bg-primary text-white hover:bg-primary/90">Go Pro</Button>
                 </a>
               </CardContent>

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import CommandHistory from "@/components/CommandHistory";
+import { config } from "@/config";
 
 export default function BotInterface() {
   const [commandInput, setCommandInput] = useState("");
@@ -42,7 +43,7 @@ export default function BotInterface() {
         response = "Usage: /status [invoice_id]";
       }
     } else if (commandInput.startsWith("/upgrade")) {
-      response = "Plans: $0/mo (Free), $5/mo (Basic - 10 invoices), $15/mo (Pro - unlimited). Visit the dashboard to upgrade or use these direct links: Free: https://buy.stripe.com/14kg135UDeK05iweUW, Basic: https://buy.stripe.com/cN23eh5UD0Tah1e7st, Pro: https://buy.stripe.com/aEU1692IrdFWdP25kk";
+      response = `Plans: $0/mo (Free), $5/mo (Basic - 10 invoices), $15/mo (Pro - unlimited). Visit the dashboard to upgrade or use these direct links: Free: ${config.stripeCheckoutLinks.free}, Basic: ${config.stripeCheckoutLinks.basic}, Pro: ${config.stripeCheckoutLinks.pro}`;
     }
     
     // Add to history

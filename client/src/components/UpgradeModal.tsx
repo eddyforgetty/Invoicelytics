@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { config } from "@/config";
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/14kg135UDeK05iweUW', '_blank');
+                  window.open(config.stripeCheckoutLinks.free, '_blank');
                   onClose();
                 }}
               >
@@ -111,7 +112,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 size="sm"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/cN23eh5UD0Tah1e7st', '_blank');
+                  window.open(config.stripeCheckoutLinks.basic, '_blank');
                   onClose();
                 }}
               >
@@ -166,7 +167,7 @@ export default function UpgradeModal({ isOpen, onClose }: UpgradeModalProps) {
                 variant="secondary"
                 className="w-full"
                 onClick={() => {
-                  window.open('https://buy.stripe.com/aEU1692IrdFWdP25kk', '_blank');
+                  window.open(config.stripeCheckoutLinks.pro, '_blank');
                   onClose();
                 }}
               >
