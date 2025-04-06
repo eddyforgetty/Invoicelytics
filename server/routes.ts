@@ -28,6 +28,7 @@ if (!process.env.TELEGRAM_TOKEN) {
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: "2023-10-16" as any, // Type assertion to bypass version check
+      // Make sure we're using live mode, not test mode
     })
   : null;
 
