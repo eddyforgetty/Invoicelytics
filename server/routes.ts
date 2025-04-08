@@ -5,9 +5,8 @@ import { storage } from "./storage";
 import { createInvoiceSchema } from "@shared/schema";
 import { ZodError, z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { botHandler } from "./botHandler";
+import { initBot } from "./bot";
 import { setupAuth } from "./auth";
-import { resetTelegramBot } from "./telegram-reset";
 
 // Type definitions for Stripe expanded objects
 interface ExpandedPaymentIntent {
@@ -34,41 +33,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Telegram bot if token exists (non-blocking) using the external reset approach
+  // Initialize Telegram bot if token exists (non-blocking)
   if (process.env.TELEGRAM_TOKEN) {
-    console.log("Starting Telegram bot initialization with external API reset...");
-    
-    // First, perform a direct API call to reset the bot's webhook and terminate connections
-    // This happens outside our process, so it can help when bot is stuck in another server
-    (async () => {
-      try {
-        // First, reset the bot via Telegram API
-        const resetSuccess = await resetTelegramBot(process.env.TELEGRAM_TOKEN!);
-        
-        if (!resetSuccess) {
-          console.error("Failed to reset Telegram bot via external API");
-          return;
-        }
-        
-        console.log("External Telegram bot reset successful, waiting before starting local instance...");
-        
-        // Add significant delay to ensure Telegram servers have time to fully cleanup
-        setTimeout(async () => {
-          try {
-            // Stop any local instances
-            await botHandler.stop();
-            
-            // Then start the new one
-            await botHandler.start(process.env.TELEGRAM_TOKEN!, stripe);
-            console.log("Telegram bot initialized successfully after external reset");
-          } catch (error: any) {
-            console.error("Failed to initialize Telegram bot:", error?.message || error);
-          }
-        }, 8000); // 8 second delay to ensure clean startup after external reset
-      } catch (error) {
-        console.error("Error during Telegram bot initialization:", error);
-      }
-    })();
+    console.log("Starting Telegram bot initialization...");
+    // Start bot initialization without awaiting to prevent blocking server startup
+    initBot(process.env.TELEGRAM_TOKEN, stripe)
+      .then(() => console.log("Telegram bot initialized successfully"))
+      .catch(error => console.error("Failed to initialize Telegram bot:", error));
   }
   
   // Set up authentication with session middleware and auth endpoints

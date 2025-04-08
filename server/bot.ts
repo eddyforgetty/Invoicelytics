@@ -87,26 +87,8 @@ async function generateInvoicePDF(invoiceId: string, name: string, amount: numbe
   });
 }
 
-// Global variable to track bot instance
-let activeBot: Telegraf<BotContext> | null = null;
-
 export async function initBot(token: string, stripe: Stripe | null) {
-  // Stop any existing bot instance
-  if (activeBot) {
-    console.log("Stopping existing Telegram bot instance");
-    try {
-      await activeBot.stop();
-      // Short delay to ensure the previous bot instance has fully stopped
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (err) {
-      console.error("Error stopping existing bot:", err);
-    }
-    activeBot = null;
-  }
-  
-  // Create new bot instance
   const bot = new Telegraf<BotContext>(token);
-  activeBot = bot;
   
   // Register middleware to find or create user
   bot.use(async (ctx, next) => {
@@ -183,53 +165,37 @@ export async function initBot(token: string, stripe: Stripe | null) {
         let paymentLink = null;
         if (stripe) {
           try {
-            console.log("Creating Stripe checkout session for invoice...");
+            const product = await stripe.products.create({
+              name: `Invoice ${invoiceId} - ${validData.description}`,
+            });
             
-            // Using type assertion to bypass TypeScript errors with Stripe API
+            const price = await stripe.prices.create({
+              unit_amount: Math.round(validData.amount * 100), // Convert to cents
+              currency: 'usd',
+              product: product.id,
+            });
+            
             const session = await stripe.checkout.sessions.create({
               payment_method_types: ['card'],
               line_items: [
                 {
-                  // Had to use type assertion to fix TypeScript errors
-                  // @ts-ignore - Stripe types are not correctly matching the API
-                  price_data: {
-                    currency: 'usd',
-                    product_data: {
-                      name: `Invoice #${invoiceId}`,
-                      description: validData.description,
-                    },
-                    unit_amount: Math.round(validData.amount * 100), // Convert to cents
-                  },
+                  price: price.id,
                   quantity: 1,
                 },
               ],
               mode: 'payment',
-              success_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=paid&id=${invoiceId}`,
-              cancel_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=canceled&id=${invoiceId}`,
-              metadata: {
-                invoiceId: invoiceId
-              }
+              success_url: `https://example.com/invoice-paid?id=${invoiceId}`,
+              cancel_url: `https://example.com/invoice-canceled?id=${invoiceId}`,
             });
             
             paymentLink = session.url;
-            console.log("Checkout session created, URL:", paymentLink);
             
             // Send payment link
             if (paymentLink) {
               await ctx.reply(`Pay here: ${paymentLink}`);
-              console.log("Payment link sent to user");
-            } else {
-              console.error("Payment link is undefined");
-              await ctx.reply("Sorry, I couldn't generate a payment link at this time.");
             }
-          } catch (error) {
-            console.error("Stripe error:", error);
-            // Log more detailed error information
-            if (error instanceof Error) {
-              console.error("Error message:", error.message);
-              console.error("Error stack:", error.stack);
-            }
-            await ctx.reply("Sorry, there was an error creating the payment link. Please try again later.");
+          } catch (stripeError) {
+            console.error("Stripe error:", stripeError);
           }
         }
         
@@ -292,12 +258,7 @@ export async function initBot(token: string, stripe: Stripe | null) {
   // Upgrade command
   bot.command("upgrade", async (ctx) => {
     await ctx.reply(
-      "InvoiceLyticsBot Premium Plans:\n\n" +
-      "• BASIC PLAN: $5/mo (10 invoices/month)\n" +
-      "Subscribe here: https://buy.stripe.com/cN23eh5UD0Tah1e7st\n\n" +
-      "• PRO PLAN: $15/mo (unlimited invoices)\n" +
-      "Subscribe here: https://buy.stripe.com/aEU1692IrdFWdP25kk\n\n" +
-      "More info at https://invoicelytics.repl.co"
+      "InvoiceLyticsBot Premium Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit our website to upgrade your plan."
     );
   });
   

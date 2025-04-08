@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { runEmergencyCleanup } from "./cleanup";
 
 const app = express();
 app.use(express.json());
@@ -38,15 +37,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Run emergency cleanup to kill any stale Telegram bot instances before starting
-  try {
-    log("Running emergency Telegram bot cleanup on startup...");
-    await runEmergencyCleanup();
-    log("Cleanup completed, continuing with server initialization");
-  } catch (error) {
-    console.error("Error during emergency cleanup:", error);
-  }
-  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
