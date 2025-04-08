@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { createInvoiceSchema } from "@shared/schema";
 import { ZodError, z } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { initBot } from "./bot";
+import { botHandler } from "./botHandler";
 import { setupAuth } from "./auth";
 
 // Type definitions for Stripe expanded objects
@@ -33,16 +33,22 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Initialize Telegram bot if token exists (non-blocking)
+  // Initialize Telegram bot if token exists (non-blocking) using the class-based approach
   if (process.env.TELEGRAM_TOKEN) {
-    console.log("Starting Telegram bot initialization with proper error handling...");
-    // Start bot initialization without awaiting to prevent blocking server startup
-    // Add a delay before initializing to ensure any previous instances are fully cleaned up
-    setTimeout(() => {
-      initBot(process.env.TELEGRAM_TOKEN!, stripe)
-        .then(() => console.log("Telegram bot initialized successfully"))
-        .catch(error => console.error("Failed to initialize Telegram bot:", error));
-    }, 2000); // 2 second delay
+    console.log("Starting Telegram bot initialization with the new class-based handler...");
+    // This approach prevents multiple bot instances and handles cleanup properly
+    setTimeout(async () => {
+      try {
+        // First stop any existing bot
+        await botHandler.stop();
+        
+        // Then start the new one
+        await botHandler.start(process.env.TELEGRAM_TOKEN!, stripe);
+        console.log("Telegram bot initialized successfully with the new handler");
+      } catch (error: any) {
+        console.error("Failed to initialize Telegram bot:", error?.message || error);
+      }
+    }, 3000); // 3 second delay to ensure clean startup
   }
   
   // Set up authentication with session middleware and auth endpoints
