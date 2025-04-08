@@ -10,6 +10,7 @@ import Subscribe from "@/pages/Subscribe";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
+      <Route path="/terms-of-service" component={TermsOfService} />
       <ProtectedRoute path="/dashboard" component={Dashboard} />
       <ProtectedRoute path="/invoice/:id" component={InvoiceDetail} />
       <ProtectedRoute path="/subscribe" component={Subscribe} />

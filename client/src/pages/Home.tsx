@@ -361,9 +361,14 @@ export default function Home() {
               <div className="text-sm text-gray-500 mb-2">
                 © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
               </div>
-              <Link href="/privacy-policy" className="text-sm text-primary hover:underline">
-                Privacy Policy
-              </Link>
+              <div className="flex space-x-4">
+                <Link href="/privacy-policy" className="text-sm text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+                <Link href="/terms-of-service" className="text-sm text-primary hover:underline">
+                  Terms of Service
+                </Link>
+              </div>
             </div>
           </div>
         </div>
