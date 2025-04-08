@@ -165,36 +165,48 @@ export async function initBot(token: string, stripe: Stripe | null) {
         let paymentLink = null;
         if (stripe) {
           try {
-            console.log("Creating Stripe product...");
-            const product = await stripe.products.create({
-              name: `Invoice ${invoiceId} - ${validData.description}`,
-            });
-            console.log("Product created:", product.id);
+            console.log("Creating Stripe payment link for invoice...");
             
-            console.log("Creating Stripe price...");
-            const price = await stripe.prices.create({
-              unit_amount: Math.round(validData.amount * 100), // Convert to cents
-              currency: 'usd',
-              product: product.id,
+            // Create a payment intent first (simpler than products + prices + checkout)
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount: Math.round(validData.amount * 100), // Convert to cents
+              currency: "usd",
+              automatic_payment_methods: {
+                enabled: true,
+              },
+              description: `Invoice ${invoiceId}: ${validData.description}`,
+              metadata: {
+                invoiceId: invoiceId,
+                clientName: validData.name
+              }
             });
-            console.log("Price created:", price.id);
+            console.log("Payment intent created:", paymentIntent.id);
             
-            console.log("Creating Stripe checkout session...");
-            const session = await stripe.checkout.sessions.create({
-              payment_method_types: ['card'],
+            // Now create a payment link from the payment intent
+            const paymentLinkObj = await stripe.paymentLinks.create({
               line_items: [
                 {
-                  price: price.id,
+                  price_data: {
+                    currency: 'usd',
+                    product_data: {
+                      name: `Invoice #${invoiceId}`,
+                      description: validData.description,
+                    },
+                    unit_amount: Math.round(validData.amount * 100), // Convert to cents
+                  },
                   quantity: 1,
                 },
               ],
-              mode: 'payment',
-              success_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=paid&id=${invoiceId}`,
-              cancel_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=canceled&id=${invoiceId}`,
+              after_completion: {
+                type: 'redirect',
+                redirect: {
+                  url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=paid&id=${invoiceId}`,
+                },
+              },
             });
             
-            paymentLink = session.url;
-            console.log("Checkout session created, URL:", paymentLink);
+            paymentLink = paymentLinkObj.url;
+            console.log("Payment link created:", paymentLink);
             
             // Send payment link
             if (paymentLink) {
