@@ -165,16 +165,21 @@ export async function initBot(token: string, stripe: Stripe | null) {
         let paymentLink = null;
         if (stripe) {
           try {
+            console.log("Creating Stripe product...");
             const product = await stripe.products.create({
               name: `Invoice ${invoiceId} - ${validData.description}`,
             });
+            console.log("Product created:", product.id);
             
+            console.log("Creating Stripe price...");
             const price = await stripe.prices.create({
               unit_amount: Math.round(validData.amount * 100), // Convert to cents
               currency: 'usd',
               product: product.id,
             });
+            console.log("Price created:", price.id);
             
+            console.log("Creating Stripe checkout session...");
             const session = await stripe.checkout.sessions.create({
               payment_method_types: ['card'],
               line_items: [
@@ -184,18 +189,29 @@ export async function initBot(token: string, stripe: Stripe | null) {
                 },
               ],
               mode: 'payment',
-              success_url: `https://example.com/invoice-paid?id=${invoiceId}`,
-              cancel_url: `https://example.com/invoice-canceled?id=${invoiceId}`,
+              success_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=paid&id=${invoiceId}`,
+              cancel_url: `${process.env.APP_URL || 'https://invoicelytics.repl.co'}/dashboard?status=canceled&id=${invoiceId}`,
             });
             
             paymentLink = session.url;
+            console.log("Checkout session created, URL:", paymentLink);
             
             // Send payment link
             if (paymentLink) {
               await ctx.reply(`Pay here: ${paymentLink}`);
+              console.log("Payment link sent to user");
+            } else {
+              console.error("Payment link is undefined");
+              await ctx.reply("Sorry, I couldn't generate a payment link at this time.");
             }
-          } catch (stripeError) {
-            console.error("Stripe error:", stripeError);
+          } catch (error) {
+            console.error("Stripe error:", error);
+            // Log more detailed error information
+            if (error instanceof Error) {
+              console.error("Error message:", error.message);
+              console.error("Error stack:", error.stack);
+            }
+            await ctx.reply("Sorry, there was an error creating the payment link. Please try again later.");
           }
         }
         
@@ -258,7 +274,12 @@ export async function initBot(token: string, stripe: Stripe | null) {
   // Upgrade command
   bot.command("upgrade", async (ctx) => {
     await ctx.reply(
-      "InvoiceLyticsBot Premium Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit our website to upgrade your plan."
+      "InvoiceLyticsBot Premium Plans:\n\n" +
+      "• BASIC PLAN: $5/mo (10 invoices/month)\n" +
+      "Subscribe here: https://buy.stripe.com/cN23eh5UD0Tah1e7st\n\n" +
+      "• PRO PLAN: $15/mo (unlimited invoices)\n" +
+      "Subscribe here: https://buy.stripe.com/aEU1692IrdFWdP25kk\n\n" +
+      "More info at https://invoicelytics.repl.co"
     );
   });
   
