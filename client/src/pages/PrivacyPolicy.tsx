@@ -16,7 +16,7 @@ export default function PrivacyPolicy() {
                 <path d="M12 17.5v-11" />
               </svg>
               <Link href="/">
-                <a className="text-xl font-bold text-white">InvoiceLyticsBot</a>
+                <span className="text-xl font-bold text-white cursor-pointer">InvoiceLyticsBot</span>
               </Link>
             </div>
             <div className="flex items-center space-x-2">
@@ -132,7 +132,7 @@ export default function PrivacyPolicy() {
             <div className="flex flex-col items-center md:items-end">
               <div className="flex gap-4 mb-2">
                 <Link href="/">
-                  <a className="text-sm text-gray-500 hover:text-primary">Home</a>
+                  <span className="text-sm text-gray-500 hover:text-primary cursor-pointer">Home</span>
                 </Link>
                 <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-primary">Telegram</a>
                 <a href="mailto:eddyforgetty@gmail.com" className="text-sm text-gray-500 hover:text-primary">Support</a>

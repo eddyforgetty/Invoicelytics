@@ -1,0 +1,49 @@
+Terms of Service for InvoiceLytics Telegram Bot
+Effective Date: April 08, 2025
+1. Welcome
+InvoiceLytics Telegram Bot ("we," "us," or "the Bot") helps freelancers invoice clients fast via Telegram. These Terms of Service ("Terms") govern your use. By sending commands like /invoice, you agree to them. Don’t like the rules? Don’t use the Bot. 
+
+2. What the Bot Does
+Create PDF invoices (e.g., /invoice [name] [amount] [description]).
+Generate Stripe payment links.
+Track statuses (e.g., /status [invoice_id]).
+Offer a free tier (3 invoices/month) and paid plans ($5/mo for 10, $15/mo unlimited).
+It’s hosted on Replit, tied to Telegram, and uses Stripe for payments.
+3. Who Can Use It
+You must be 13+ years old.
+You need a Telegram account and, for payments, a Stripe account.
+4. Your Obligations
+Input: Give accurate invoice details—we’re not responsible for typos or errors.
+Use: Don’t abuse the Bot (e.g., spamming, illegal stuff).
+Stripe: Manage your Stripe account; their Terms apply.
+Laws: Handle your own taxes and legal stuff—the Bot’s just a tool.
+5. Pricing
+Free: 3 invoices/month.
+Paid: $5/month (10 invoices), $15/month (unlimited)—see /upgrade.
+Billing: Via Stripe (manual for now). No refunds after payment.
+Changes: We can adjust prices with notice via Telegram.
+6. Ownership
+The Bot’s ours (code, concept, etc.). You can use it as intended.
+Your invoice data stays yours—we don’t own it.
+7. Privacy
+We collect minimal data to run the Bot. Check our Privacy Policy (#) at [https://invoicelytics.com/privacy-policy].
+8. Third Parties
+Telegram: Follow their rules—we rely on their platform.
+Stripe: Payments follow Stripe’s terms.
+Replit: Hosting hiccups aren’t on us.
+9. Liability Limits
+As-Is: The Bot’s provided “as is”—no warranties.
+Risks: We’re not liable for lost payments, downtime, or errors.
+Max Loss: Our liability caps at what you’ve paid us (e.g., $15 if on the unlimited plan).
+10. Ending Use
+You: Stop anytime—block the Bot.
+Us: We can suspend you for breaking Terms or shut down the Bot. No refunds if banned.
+11. Service Changes
+We might tweak or discontinue the Bot. We’ll try to notify you via Telegram.
+12. Law
+Governed by [Your State/Country, e.g., California, USA] laws. Disputes go there.
+13. Contact
+Reach us at [eddyforgetty@gmail.com] or message the Bot. We’ll reply ASAP.
+14. Agreement
+Using the Bot means you accept these Terms. Happy invoicing!
+

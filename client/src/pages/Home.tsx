@@ -284,7 +284,10 @@ export default function Home() {
               <div className="flex gap-4 mb-2">
                 <a href="#faq" className="text-sm text-gray-500 hover:text-primary">FAQ</a>
                 <Link href="/privacy">
-                  <a className="text-sm text-gray-500 hover:text-primary">Privacy Policy</a>
+                  <span className="text-sm text-gray-500 hover:text-primary cursor-pointer">Privacy Policy</span>
+                </Link>
+                <Link href="/terms">
+                  <span className="text-sm text-gray-500 hover:text-primary cursor-pointer">Terms of Service</span>
                 </Link>
                 <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-primary">Telegram</a>
                 <a href="mailto:eddyforgetty@gmail.com" className="text-sm text-gray-500 hover:text-primary">Support</a>
