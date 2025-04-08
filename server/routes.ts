@@ -35,11 +35,14 @@ const stripe = process.env.STRIPE_SECRET_KEY
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Telegram bot if token exists (non-blocking)
   if (process.env.TELEGRAM_TOKEN) {
-    console.log("Starting Telegram bot initialization...");
+    console.log("Starting Telegram bot initialization with proper error handling...");
     // Start bot initialization without awaiting to prevent blocking server startup
-    initBot(process.env.TELEGRAM_TOKEN, stripe)
-      .then(() => console.log("Telegram bot initialized successfully"))
-      .catch(error => console.error("Failed to initialize Telegram bot:", error));
+    // Add a delay before initializing to ensure any previous instances are fully cleaned up
+    setTimeout(() => {
+      initBot(process.env.TELEGRAM_TOKEN!, stripe)
+        .then(() => console.log("Telegram bot initialized successfully"))
+        .catch(error => console.error("Failed to initialize Telegram bot:", error));
+    }, 2000); // 2 second delay
   }
   
   // Set up authentication with session middleware and auth endpoints

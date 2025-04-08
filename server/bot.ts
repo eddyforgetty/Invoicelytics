@@ -87,8 +87,26 @@ async function generateInvoicePDF(invoiceId: string, name: string, amount: numbe
   });
 }
 
+// Global variable to track bot instance
+let activeBot: Telegraf<BotContext> | null = null;
+
 export async function initBot(token: string, stripe: Stripe | null) {
+  // Stop any existing bot instance
+  if (activeBot) {
+    console.log("Stopping existing Telegram bot instance");
+    try {
+      await activeBot.stop();
+      // Short delay to ensure the previous bot instance has fully stopped
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch (err) {
+      console.error("Error stopping existing bot:", err);
+    }
+    activeBot = null;
+  }
+  
+  // Create new bot instance
   const bot = new Telegraf<BotContext>(token);
+  activeBot = bot;
   
   // Register middleware to find or create user
   bot.use(async (ctx, next) => {
