@@ -269,9 +269,9 @@ export default function Home() {
       <footer className="bg-white border-t border-gray-200 py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
+            <div className="mb-6 md:mb-0">
               <div className="flex items-center space-x-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-receipt text-primary-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                   <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
                   <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
                   <path d="M12 17.5v-11" />
@@ -281,7 +281,7 @@ export default function Home() {
               <p className="text-sm text-gray-500 mt-2">A simple way to create and track invoices</p>
             </div>
             <div className="flex flex-col items-center md:items-end">
-              <div className="flex gap-4 mb-2">
+              <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-2 mb-3">
                 <a href="#faq" className="text-sm text-gray-500 hover:text-primary">FAQ</a>
                 <Link href="/privacy">
                   <span className="text-sm text-gray-500 hover:text-primary cursor-pointer">Privacy Policy</span>
