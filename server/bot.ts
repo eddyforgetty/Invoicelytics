@@ -8,6 +8,16 @@ import { storage } from "./storage";
 import { invoiceCommandSchema } from "@shared/schema";
 import { ZodError } from "zod";
 
+// Set up subscription URLs
+const STRIPE_SUBSCRIPTION_URLS = {
+  free: 'https://buy.stripe.com/14kg135UDeK05iweUW',
+  basic: 'https://buy.stripe.com/cN23eh5UD0Tah1e7st',
+  pro: 'https://buy.stripe.com/aEU1692IrdFWdP25kk'
+};
+
+// Bot singleton to prevent multiple instances
+let botInstance: Telegraf<BotContext> | null = null;
+
 type BotContext = Context & {
   userId?: number;
 };
@@ -88,7 +98,15 @@ async function generateInvoicePDF(invoiceId: string, name: string, amount: numbe
 }
 
 export async function initBot(token: string, stripe: Stripe | null) {
+  // If an instance already exists, stop it and create a new one
+  if (botInstance) {
+    console.log("Stopping existing bot instance before creating a new one");
+    await botInstance.stop();
+    botInstance = null;
+  }
+
   const bot = new Telegraf<BotContext>(token);
+  botInstance = bot;
   
   // Register middleware to find or create user
   bot.use(async (ctx, next) => {
@@ -175,6 +193,11 @@ export async function initBot(token: string, stripe: Stripe | null) {
               product: product.id,
             });
             
+            // Use actual application URLs based on REPLIT_SLUG or domain
+            const baseUrl = process.env.REPLIT_SLUG 
+              ? `https://${process.env.REPLIT_SLUG}.replit.app` 
+              : 'https://' + (process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : 'localhost:5000');
+            
             const session = await stripe.checkout.sessions.create({
               payment_method_types: ['card'],
               line_items: [
@@ -184,8 +207,8 @@ export async function initBot(token: string, stripe: Stripe | null) {
                 },
               ],
               mode: 'payment',
-              success_url: `https://example.com/invoice-paid?id=${invoiceId}`,
-              cancel_url: `https://example.com/invoice-canceled?id=${invoiceId}`,
+              success_url: `${baseUrl}/invoice-paid?id=${invoiceId}`,
+              cancel_url: `${baseUrl}/invoice-canceled?id=${invoiceId}`,
             });
             
             paymentLink = session.url;
@@ -258,7 +281,13 @@ export async function initBot(token: string, stripe: Stripe | null) {
   // Upgrade command
   bot.command("upgrade", async (ctx) => {
     await ctx.reply(
-      "InvoiceLyticsBot Premium Plans: $5/mo (10 invoices), $15/mo (unlimited). Visit our website to upgrade your plan."
+      `InvoiceLyticsBot Premium Plans:
+      
+- Free: $0/mo (3 invoices/month) - ${STRIPE_SUBSCRIPTION_URLS.free}
+- Basic: $5/mo (10 invoices/month) - ${STRIPE_SUBSCRIPTION_URLS.basic}
+- Pro: $15/mo (unlimited invoices) - ${STRIPE_SUBSCRIPTION_URLS.pro}
+
+Click on any link above to upgrade your plan.`
     );
   });
   

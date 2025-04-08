@@ -36,10 +36,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Telegram bot if token exists (non-blocking)
   if (process.env.TELEGRAM_TOKEN) {
     console.log("Starting Telegram bot initialization...");
-    // Start bot initialization without awaiting to prevent blocking server startup
-    initBot(process.env.TELEGRAM_TOKEN, stripe)
-      .then(() => console.log("Telegram bot initialized successfully"))
-      .catch(error => console.error("Failed to initialize Telegram bot:", error));
+    
+    // Use a more robust approach with backoff and delayed initialization
+    let retries = 0;
+    const maxRetries = 3;
+    
+    const initBotWithRetry = () => {
+      // Add a slight delay before initializing to avoid conflicts
+      setTimeout(async () => {
+        try {
+          await initBot(process.env.TELEGRAM_TOKEN!, stripe);
+          console.log("Telegram bot initialized successfully");
+        } catch (error) {
+          console.error("Failed to initialize Telegram bot:", error);
+          
+          // If we haven't exceeded max retries, try again with exponential backoff
+          if (retries < maxRetries) {
+            retries++;
+            const delay = 5000 * Math.pow(2, retries); // Exponential backoff
+            console.log(`Will retry bot initialization in ${delay/1000} seconds (attempt ${retries}/${maxRetries})...`);
+            setTimeout(initBotWithRetry, delay);
+          }
+        }
+      }, 2000); // Initial delay
+    };
+    
+    // Start the initialization process
+    initBotWithRetry();
   }
   
   // Set up authentication with session middleware and auth endpoints
