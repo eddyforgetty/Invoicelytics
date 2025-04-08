@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
+import http from "http";
 
 // Define a custom context type that includes user ID
 type BotContext = Context & {
@@ -17,6 +18,10 @@ const TEMP_DIR = path.join(process.cwd(), "tmp");
 if (!fs.existsSync(TEMP_DIR)) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
 }
+
+// Bot instance lock file path
+const LOCK_FILE_PATH = path.join(TEMP_DIR, "telegram_bot.lock");
+const LOCK_CHECK_PORT = 47123; // Use a unique port for lock checking
 
 // Helper function to parse the invoice command arguments
 function parseInvoiceCommand(text: string) {
@@ -98,20 +103,151 @@ export class TelegramBotHandler {
     // Initialize instance variables
   }
   
-  // Stop any running bot instance
-  async stop(): Promise<void> {
-    if (this.bot && this.isRunning) {
-      try {
-        console.log("Stopping existing Telegram bot instance...");
-        await this.bot.stop();
-        this.isRunning = false;
-        this.bot = null;
-        // Wait a moment to ensure bot is fully stopped
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log("Telegram bot stopped successfully");
-      } catch (err) {
-        console.error("Error stopping Telegram bot:", err);
+  // Maintain a lock server to prevent multiple bot instances
+  private lockServer: http.Server | null = null;
+  
+  // Start a lock server that will hold the port as long as this instance is running
+  private startLockServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.lockServer) {
+        console.log("Lock server already running");
+        resolve();
+        return;
       }
+      
+      this.lockServer = http.createServer();
+      
+      this.lockServer.on('error', (err: any) => {
+        console.error("Failed to start lock server:", err);
+        reject(err);
+      });
+      
+      this.lockServer.on('listening', () => {
+        console.log(`Bot lock server running on port ${LOCK_CHECK_PORT}`);
+        
+        // Create lock file
+        try {
+          fs.writeFileSync(LOCK_FILE_PATH, `${process.pid}:${Date.now()}`);
+          console.log("Bot lock file created");
+        } catch (err) {
+          console.error("Error creating lock file:", err);
+        }
+        
+        resolve();
+      });
+      
+      this.lockServer.listen(LOCK_CHECK_PORT);
+    });
+  }
+  
+  // Stop any running bot instance and clean up
+  async stop(): Promise<void> {
+    try {
+      console.log("Stopping existing Telegram bot instance...");
+      
+      // Stop the bot if it's running
+      if (this.bot && this.isRunning) {
+        try {
+          await this.bot.stop();
+          console.log("Bot polling stopped");
+        } catch (err) {
+          console.error("Error stopping Telegram bot polling:", err);
+        }
+      }
+      
+      // Close the lock server if it exists
+      if (this.lockServer) {
+        try {
+          await new Promise<void>((resolve) => {
+            this.lockServer!.close(() => {
+              console.log("Bot lock server closed");
+              resolve();
+            });
+          });
+        } catch (err) {
+          console.error("Error closing bot lock server:", err);
+        }
+        this.lockServer = null;
+      }
+      
+      // Remove lock file if it exists
+      try {
+        if (fs.existsSync(LOCK_FILE_PATH)) {
+          fs.unlinkSync(LOCK_FILE_PATH);
+          console.log("Bot lock file removed");
+        }
+      } catch (err) {
+        console.error("Error removing lock file:", err);
+      }
+      
+      // Reset instance state
+      this.isRunning = false;
+      this.bot = null;
+      
+      // Wait a moment to ensure everything is fully stopped
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log("Telegram bot cleanup completed successfully");
+    } catch (err) {
+      console.error("Error during bot cleanup:", err);
+    }
+  }
+  
+  // Check if another bot instance is already running (using port)
+  private async checkForExistingBot(): Promise<boolean> {
+    return new Promise((resolve) => {
+      // Try to start a server on the lock port
+      const server = http.createServer();
+      
+      // Handle server errors (port in use = another instance is running)
+      server.on('error', () => {
+        console.log("Lock check: Another bot instance appears to be running");
+        resolve(true); // Another instance exists
+      });
+      
+      // If we can start the server, no other instance is running
+      server.on('listening', () => {
+        console.log("Lock check: No other bot instance detected");
+        server.close(() => {
+          resolve(false); // No other instance
+        });
+      });
+      
+      // Try to listen on the lock port
+      server.listen(LOCK_CHECK_PORT);
+    });
+  }
+  
+  // Clean up any stale lock files across the system
+  private async killAllTelegramBots(): Promise<void> {
+    try {
+      // On Linux systems, we can attempt to find and kill any running Telegraf processes
+      // This is a more aggressive approach, but it can help clear stuck bots
+      const killCommand = `
+        # Try to find and kill any running Telegraf bot processes
+        if command -v pkill > /dev/null 2>&1; then
+          pkill -f "node.*telegraf" || true
+        fi
+        
+        # Also try to kill any Node.js processes that might be running telegram bots
+        if command -v ps > /dev/null 2>&1 && command -v grep > /dev/null 2>&1 && command -v awk > /dev/null 2>&1; then
+          ps aux | grep "[t]elegraf" | awk '{print $2}' | xargs kill -9 2>/dev/null || true
+        fi
+      `;
+      
+      // Execute the cleanup command (non-blocking)
+      const exec = require('child_process').exec;
+      exec(killCommand, (error: any, stdout: any, stderr: any) => {
+        if (error) {
+          console.log("Warning: Could not kill existing bot processes:", error);
+        } else {
+          console.log("Attempted to kill any existing Telegram bot processes");
+        }
+      });
+      
+      // Wait for processes to terminate
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    } catch (err) {
+      console.error("Error during bot cleanup:", err);
     }
   }
   
@@ -119,6 +255,23 @@ export class TelegramBotHandler {
   async start(token: string, stripeInstance: Stripe | null): Promise<void> {
     // Ensure any existing bot is stopped first
     await this.stop();
+    
+    // First, check if another bot instance is running
+    const anotherInstanceRunning = await this.checkForExistingBot();
+    
+    if (anotherInstanceRunning) {
+      console.log("Detected another bot instance running, attempting to forcefully kill it");
+      await this.killAllTelegramBots();
+      
+      // Wait some time for processes to fully terminate
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Check again
+      const stillRunning = await this.checkForExistingBot();
+      if (stillRunning) {
+        throw new Error("Unable to start bot: another instance is still running despite cleanup attempts");
+      }
+    }
     
     try {
       console.log("Creating new Telegram bot instance...");
@@ -324,14 +477,30 @@ export class TelegramBotHandler {
         ctx.reply("An error occurred. Please try again later.");
       });
       
+      // Start the lock server to prevent other instances
+      try {
+        await this.startLockServer();
+      } catch (error) {
+        console.error("Failed to start bot lock server:", error);
+        throw new Error("Could not start bot lock server. Another instance may be running.");
+      }
+      
       // Start the bot
       console.log("Launching new Telegram bot instance...");
       try {
+        // Enable graceful shutdown
+        process.once('SIGINT', () => this.stop());
+        process.once('SIGTERM', () => this.stop());
+        
+        // Launch with default options (using long polling)
+        // Note: Telegraf v4 handles webhooks differently, we're just using the default long polling
         await this.bot.launch();
+        
         this.isRunning = true;
         console.log("Telegram bot launched successfully");
       } catch (error: any) {
         console.error("Error launching Telegram bot:", error?.message || error);
+        await this.stop(); // Clean up lock server on failure
         throw error; // Rethrow to be handled by caller
       }
     } catch (error) {
