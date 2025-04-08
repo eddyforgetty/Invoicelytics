@@ -184,6 +184,20 @@ export async function initBot(token: string, stripe: Stripe | null) {
                 },
               ],
               mode: 'payment',
+              success_url: `${process.env.APP_URL || 'https://' + process.env.REPL_SLUG + '.' + process.env.REPL_OWNER + '.repl.co'}/invoice-paid?id=${invoiceId}`,
+              cancel_url: `${process.env.APP_URL || 'https://' + process.env.REPL_SLUG + '.' + process.env.REPL_OWNER + '.repl.co'}/invoice-canceled?id=${invoiceId}`,
+              metadata: {
+                invoiceId: invoiceId
+              }
+            });
+
+            paymentLink = session.url;
+                {
+                  price: price.id,
+                  quantity: 1,
+                },
+              ],
+              mode: 'payment',
               success_url: `https://example.com/invoice-paid?id=${invoiceId}`,
               cancel_url: `https://example.com/invoice-canceled?id=${invoiceId}`,
             });
