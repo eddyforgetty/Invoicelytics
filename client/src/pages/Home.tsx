@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { config } from "@/config";
+import FAQ from "@/components/FAQ";
 
 export default function Home() {
   return (
@@ -34,6 +35,9 @@ export default function Home() {
                   Dashboard
                 </Button>
               </Link>
+              <a href="#faq" className="text-white hover:text-white/80">
+                FAQ
+              </a>
             </div>
           </div>
         </div>
@@ -256,6 +260,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="py-16 bg-white">
+        <FAQ />
+      </section>
+
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-4">
         <div className="container mx-auto px-4">
@@ -271,8 +280,15 @@ export default function Home() {
               </div>
               <p className="text-sm text-gray-500 mt-2">A simple way to create and track invoices</p>
             </div>
-            <div className="text-sm text-gray-500">
-              © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
+            <div className="flex flex-col items-center md:items-end">
+              <div className="flex gap-4 mb-2">
+                <a href="#faq" className="text-sm text-gray-500 hover:text-primary">FAQ</a>
+                <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-primary">Telegram</a>
+                <a href="mailto:eddyforgetty@gmail.com" className="text-sm text-gray-500 hover:text-primary">Support</a>
+              </div>
+              <div className="text-sm text-gray-500">
+                © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
+              </div>
             </div>
           </div>
         </div>
