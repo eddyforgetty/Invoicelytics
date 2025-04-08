@@ -283,6 +283,9 @@ export default function Home() {
             <div className="flex flex-col items-center md:items-end">
               <div className="flex gap-4 mb-2">
                 <a href="#faq" className="text-sm text-gray-500 hover:text-primary">FAQ</a>
+                <Link href="/privacy">
+                  <a className="text-sm text-gray-500 hover:text-primary">Privacy Policy</a>
+                </Link>
                 <a href="https://t.me/InvoiceLyticsBot" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-500 hover:text-primary">Telegram</a>
                 <a href="mailto:eddyforgetty@gmail.com" className="text-sm text-gray-500 hover:text-primary">Support</a>
               </div>
