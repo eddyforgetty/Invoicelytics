@@ -33,24 +33,43 @@ function parseInvoiceCommand(text: string) {
   // Remove the /invoice command part
   const args = text.replace(/^\/invoice\s+/i, "").trim();
   
-  // Split by spaces but preserve quotes
+  // Match patterns with either quoted values or regex patterns
   const matches = args.match(/(?:[^\s"]+|"[^"]*")+/g);
   
   if (!matches || matches.length < 3) {
     throw new Error("Invalid command format. Use: /invoice [name] [amount] [description]");
   }
   
-  // The name might contain spaces and be quoted
-  let name = matches[0].replace(/"/g, "");
-  
-  // Amount should be a number
-  const amount = parseFloat(matches[1]);
-  if (isNaN(amount)) {
-    throw new Error("Amount must be a valid number");
+  // Find the first numeric value to determine the amount position
+  let amountIndex = -1;
+  for (let i = 0; i < matches.length; i++) {
+    const value = matches[i].replace(/"/g, "");
+    if (!isNaN(parseFloat(value))) {
+      amountIndex = i;
+      break;
+    }
   }
   
-  // Description is everything else
-  const description = matches.slice(2).join(" ").replace(/"/g, "");
+  if (amountIndex === -1) {
+    throw new Error("No valid amount found. Amount must be a numeric value.");
+  }
+  
+  if (amountIndex === 0) {
+    throw new Error("Missing client name before the amount.");
+  }
+  
+  // Extract name (everything before the amount)
+  const name = matches.slice(0, amountIndex).join(" ").replace(/"/g, "");
+  
+  // Extract amount
+  const amount = parseFloat(matches[amountIndex]);
+  
+  // Description is everything after the amount
+  const description = matches.slice(amountIndex + 1).join(" ").replace(/"/g, "");
+  
+  if (!description) {
+    throw new Error("Missing description after the amount.");
+  }
   
   return { name, amount, description };
 }
@@ -133,7 +152,19 @@ export async function initBot(token: string, stripe: Stripe | null) {
   // Welcome message command
   bot.command("start", async (ctx) => {
     await ctx.reply(
-      "Welcome to InvoiceLyticsBot! Use /invoice [name] [amount] [description] to create an invoice."
+      `Welcome to InvoiceLyticsBot! 
+
+To create an invoice, use the following format:
+/invoice [full client name] [amount] [description]
+
+Examples:
+- /invoice John Smith 100 Website design project
+- /invoice "Jane Doe" 250.50 Consultation services
+- /invoice Acme Corp 1000 Monthly maintenance
+
+Other available commands:
+- /status [invoice_id] - Check the status of an invoice
+- /upgrade - View premium plans and upgrade options`
     );
   });
   
