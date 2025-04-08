@@ -357,8 +357,13 @@ export default function Home() {
               </div>
               <p className="text-sm text-gray-500 mt-2">A simple way to create and track invoices</p>
             </div>
-            <div className="text-sm text-gray-500">
-              © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
+            <div className="flex flex-col items-end md:items-center">
+              <div className="text-sm text-gray-500 mb-2">
+                © {new Date().getFullYear()} <span className="font-semibold">InvoiceLyticsBot</span>. All rights reserved.
+              </div>
+              <Link href="/privacy-policy" className="text-sm text-primary hover:underline">
+                Privacy Policy
+              </Link>
             </div>
           </div>
         </div>
