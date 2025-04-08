@@ -256,6 +256,92 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FAQ Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+          <div className="grid md:grid-cols-2 gap-x-12 gap-y-8 max-w-5xl mx-auto">
+            <div className="space-y-6">
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">What is Telegram Invoicing Bot?</h3>
+                <p className="mt-2 text-gray-600">It's a simple Telegram bot that lets freelancers create, send, and track invoices right in their chats. Type /invoice [name] [amount] [description] to generate a PDF and a Stripe payment link—no bulky apps needed!</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">How do I start using it?</h3>
+                <p className="mt-2 text-gray-600">Search for @InvoiceLyticsBot in Telegram (or click <a href="https://t.me/InvoiceLyticsBot" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">https://t.me/InvoiceLyticsBot</a>), then send /start to get going. Easy!</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">Is it free?</h3>
+                <p className="mt-2 text-gray-600">Yes, you get 3 invoices/month for free. Need more? Plans are $5/mo for 10 invoices or $15/mo for unlimited. Check /upgrade for details.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">How do I create an invoice?</h3>
+                <p className="mt-2 text-gray-600">Send /invoice [name] [amount] [description]—like /invoice John Doe 50 logo design. You'll get a PDF invoice and a payment link to share with your client.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">What's the invoice ID for?</h3>
+                <p className="mt-2 text-gray-600">It's a unique number (e.g., 1698765432) in the PDF filename. Use it with /status [invoice_id] to check if your client paid.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">Can I send the invoice outside Telegram?</h3>
+                <p className="mt-2 text-gray-600">Yep! Download the PDF or copy the payment link from the bot's reply and send it via email, WhatsApp, or wherever.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">How do payments work?</h3>
+                <p className="mt-2 text-gray-600">The bot creates a Stripe payment link for each invoice. Your client clicks it to pay with a card. You get the money in your Stripe account—set one up at <a href="https://stripe.com" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">stripe.com</a> if you haven't!</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">Are payments secure?</h3>
+                <p className="mt-2 text-gray-600">Yes, Stripe handles all payment processing with top-notch security. We don't store card details—just the invoice info you provide.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">How do I know if my client paid?</h3>
+                <p className="mt-2 text-gray-600">For now, check /status [invoice_id]—it says "pending" until we add auto-updates. Or log into your Stripe Dashboard to see payments in real time.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">The bot isn't responding—what's up?</h3>
+                <p className="mt-2 text-gray-600">Double-check your command (e.g., /invoice John 50 needs a description). If it's still quiet, email us at <a href="mailto:eddyforgetty@gmail.com" className="text-primary hover:underline">eddyforgetty@gmail.com</a>.</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">Will you add more features?</h3>
+                <p className="mt-2 text-gray-600">Yep! Email delivery and payment status updates are on the way. Got ideas? Tell us!</p>
+              </div>
+              
+              <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <h3 className="text-lg font-semibold text-primary">Can I use this for my business?</h3>
+                <p className="mt-2 text-gray-600">Totally—it's built for freelancers and small gigs. For bigger needs, let us know what you'd like!</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center mt-12">
+            <div className="inline-block p-6 bg-white rounded-lg border border-gray-100 shadow-sm max-w-xl">
+              <h3 className="text-lg font-semibold text-primary mb-2">Still have questions?</h3>
+              <p className="text-gray-600 mb-4">We're here to help! Contact our support team with any questions or feedback.</p>
+              <a href="mailto:eddyforgetty@gmail.com" className="inline-flex items-center bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail mr-2">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                Contact Support
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 py-4">
         <div className="container mx-auto px-4">
